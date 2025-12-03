@@ -59,7 +59,7 @@ export function NotificationBell() {
                         <h4 className="font-medium">Notifications</h4>
                         {permission !== "granted" && (
                             <Button
-                                variant="xs"
+                                variant="default"
                                 size="sm"
                                 onClick={requestPermission}
                                 className="text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white border-none"
