@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/dashboard/hero-section"
 import { TimelineFeed } from "@/components/dashboard/timeline-feed"
 import { CourseGrid } from "@/components/dashboard/course-grid"
 import { PriorityBanner } from "@/components/dashboard/priority-banner"
+import { NoticeBoard } from "@/components/dashboard/notice-board"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
@@ -48,6 +49,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white relative selection:bg-purple-500/30">
       <PriorityBanner />
+      <NoticeBoard />
 
       {/* Background Gradients */}
       <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">

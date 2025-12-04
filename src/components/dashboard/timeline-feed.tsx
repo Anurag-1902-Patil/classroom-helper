@@ -7,7 +7,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AlertCircle, BookOpen, Calendar, CheckCircle2, ArrowRight, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { usePushSubscription } from "@/hooks/usePushSubscription"
+import { AlertCircle, BookOpen, Calendar, CheckCircle2, ArrowRight, Clock, Bell, BellRing } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format, isToday, isTomorrow, isThisWeek, isPast, isFuture } from "date-fns"
 import { CalendarView } from "./calendar-view"
@@ -15,6 +17,7 @@ import { CalendarView } from "./calendar-view"
 export function TimelineFeed() {
     const { data: items, isLoading } = useClassroomData()
     const [view, setView] = useState<"timeline" | "calendar">("timeline")
+    const { subscribeToPush, isSupported, subscription } = usePushSubscription()
 
     if (isLoading) {
         return <TimelineSkeleton />
@@ -50,12 +53,25 @@ export function TimelineFeed() {
                     <Calendar className="w-5 h-5 text-zinc-400" />
                     Schedule & Tasks
                 </h2>
-                <Tabs value={view} onValueChange={(v) => setView(v as "timeline" | "calendar")} className="w-auto">
-                    <TabsList className="bg-zinc-900 border border-zinc-800">
-                        <TabsTrigger value="timeline">Timeline</TabsTrigger>
-                        <TabsTrigger value="calendar">Calendar</TabsTrigger>
-                    </TabsList>
-                </Tabs>
+                <div className="flex items-center gap-2">
+                    {isSupported && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={subscribeToPush}
+                            className="text-zinc-400 hover:text-white hover:bg-zinc-800"
+                            title={subscription ? "Notifications Enabled" : "Enable Notifications"}
+                        >
+                            {subscription ? <BellRing className="w-5 h-5 text-purple-400" /> : <Bell className="w-5 h-5" />}
+                        </Button>
+                    )}
+                    <Tabs value={view} onValueChange={(v) => setView(v as "timeline" | "calendar")} className="w-auto">
+                        <TabsList className="bg-zinc-900 border border-zinc-800">
+                            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                            <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
             </div>
 
             {view === "calendar" ? (
