@@ -55,7 +55,7 @@ export function useClassroomData() {
             // 3. Process and Merge
             const allItems: CombinedItem[] = []
 
-            results.forEach(({ course, work, announcements, materials }) => {
+            for (const { course, work, announcements, materials } of results) {
                 // Process Assignments
                 work.forEach((w) => {
                     let date: Date | undefined
@@ -87,13 +87,13 @@ export function useClassroomData() {
                 })
 
                 // Process Announcements & Smart Parse
-                announcements.forEach((a) => {
-                    const detectedEvents = parseAnnouncementText(a.text, course.id)
+                const announcementPromises = announcements.map(async (a) => {
+                    const detectedEvents = await parseAnnouncementText(a.text, course.id)
 
                     if (detectedEvents.length > 0) {
                         detectedEvents.forEach(event => {
                             allItems.push({
-                                id: `detected-${a.id}-${event.title}`,
+                                id: `detected-${a.id}-${event.title.replace(/\s+/g, '-')}`,
                                 title: event.title,
                                 description: a.text,
                                 materials: a.materials,
@@ -123,6 +123,9 @@ export function useClassroomData() {
                     }
                 })
 
+                // Wait for all announcement parsing to complete
+                await Promise.all(announcementPromises)
+
                 // Process Course Materials
                 materials.forEach((m) => {
                     allItems.push({
@@ -138,7 +141,7 @@ export function useClassroomData() {
                         priority: "LOW"
                     })
                 })
-            })
+            }
 
             // Sort by date (items with date first, then undefined)
             return allItems.sort((a, b) => {

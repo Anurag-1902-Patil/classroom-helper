@@ -1,15 +1,20 @@
 "use client"
 
+import { useState } from "react"
 import { useClassroomData, CombinedItem } from "@/hooks/useClassroomData"
 import { motion } from "framer-motion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { AlertCircle, BookOpen, Calendar, CheckCircle2, ArrowRight } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { AlertCircle, BookOpen, Calendar, CheckCircle2, ArrowRight, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { format, isToday, isTomorrow, isThisWeek, isPast, isFuture } from "date-fns"
+import { CalendarView } from "./calendar-view"
 
 export function TimelineFeed() {
     const { data: items, isLoading } = useClassroomData()
+    const [view, setView] = useState<"timeline" | "calendar">("timeline")
 
     if (isLoading) {
         return <TimelineSkeleton />
@@ -23,13 +28,77 @@ export function TimelineFeed() {
         )
     }
 
+    // Group items by date category
+    const groupedItems = {
+        today: items.filter(i => i.date && isToday(i.date)),
+        tomorrow: items.filter(i => i.date && isTomorrow(i.date)),
+        thisWeek: items.filter(i => i.date && isThisWeek(i.date) && !isToday(i.date) && !isTomorrow(i.date) && isFuture(i.date)),
+        upcoming: items.filter(i => i.date && !isThisWeek(i.date) && isFuture(i.date)),
+        noDate: items.filter(i => !i.date),
+        past: items.filter(i => i.date && isPast(i.date) && !isToday(i.date))
+    }
+
     return (
         <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-zinc-400" />
-                Timeline
-            </h2>
-            <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-zinc-800 before:to-transparent">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-zinc-400" />
+                    Schedule & Tasks
+                </h2>
+                <Tabs value={view} onValueChange={(v) => setView(v as "timeline" | "calendar")} className="w-auto">
+                    <TabsList className="bg-zinc-900 border border-zinc-800">
+                        <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                        <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                    </TabsList>
+                </Tabs>
+            </div>
+
+            {view === "calendar" ? (
+                <CalendarView items={items} />
+            ) : (
+                <div className="space-y-8">
+                    {/* Today */}
+                    {groupedItems.today.length > 0 && (
+                        <TimelineSection title="Today" items={groupedItems.today} />
+                    )}
+
+                    {/* Tomorrow */}
+                    {groupedItems.tomorrow.length > 0 && (
+                        <TimelineSection title="Tomorrow" items={groupedItems.tomorrow} />
+                    )}
+
+                    {/* This Week */}
+                    {groupedItems.thisWeek.length > 0 && (
+                        <TimelineSection title="This Week" items={groupedItems.thisWeek} />
+                    )}
+
+                    {/* Upcoming */}
+                    {groupedItems.upcoming.length > 0 && (
+                        <TimelineSection title="Upcoming" items={groupedItems.upcoming} />
+                    )}
+
+                    {/* No Date / Others */}
+                    {groupedItems.noDate.length > 0 && (
+                        <TimelineSection title="No Due Date" items={groupedItems.noDate} />
+                    )}
+
+                    {/* Past (Collapsed or at bottom) */}
+                    {groupedItems.past.length > 0 && (
+                        <div className="opacity-60">
+                            <TimelineSection title="Past" items={groupedItems.past} />
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function TimelineSection({ title, items }: { title: string, items: CombinedItem[] }) {
+    return (
+        <div className="space-y-4">
+            <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider pl-2 border-l-2 border-zinc-800">{title}</h3>
+            <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-zinc-800 before:to-transparent">
                 {items.map((item, index) => (
                     <TimelineItem key={item.id} item={item} index={index} />
                 ))}
@@ -96,7 +165,10 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
 
                             <div className="text-xs text-zinc-500 flex items-center justify-between w-full">
                                 {item.date ? (
-                                    <span>{item.date.toLocaleDateString()} • {item.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    <span className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {format(item.date, "MMM d, h:mm a")}
+                                    </span>
                                 ) : (
                                     <span>No due date</span>
                                 )}
