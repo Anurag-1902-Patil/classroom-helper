@@ -23,7 +23,7 @@ export function PriorityBanner() {
                     <AlertTriangle className="w-4 h-4 animate-pulse shrink-0" />
                     <div className="flex gap-4 overflow-hidden whitespace-nowrap">
                         <span>
-                            {urgentItems.length} urgent deadline{urgentItems.length > 1 ? 's' : ''}: {urgentItems.map(i => i.title).join(", ")}
+                            {urgentItems.length} urgent deadline{urgentItems.length > 1 ? 's' : ''}: {urgentItems.map(i => i.summary || i.title).join(", ")}
                         </span>
                     </div>
                 </div>

@@ -122,7 +122,7 @@ function TimelineSection({ title, items }: { title: string, items: CombinedItem[
 }
 
 function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
-    const isDetected = item.id.startsWith("detected-")
+    const isDetected = item.id.startsWith("detected-") || !!item.summary // It's detected if it has a summary or ID prefix
     const isUrgent = item.priority === "HIGH"
 
     return (
@@ -133,14 +133,17 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
             className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group"
         >
             {/* Icon / Dot */}
-            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-zinc-800 bg-zinc-900 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 relative">
-                {item.type === "ASSIGNMENT" ? (
-                    <BookOpen className="w-4 h-4 text-blue-400" />
-                ) : item.type === "EVENT" ? (
-                    <AlertCircle className="w-4 h-4 text-purple-400" />
-                ) : (
-                    <CheckCircle2 className="w-4 h-4 text-zinc-400" />
-                )}
+            <div className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-full border border-zinc-800 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 relative",
+                item.type === 'URGENT' ? "bg-red-900/20 border-red-500/30" : "bg-zinc-900"
+            )}>
+                {item.type === "ASSIGNMENT" && <BookOpen className="w-4 h-4 text-blue-400" />}
+                {item.type === "TEST" && <Clock className="w-4 h-4 text-orange-400" />}
+                {item.type === "URGENT" && <AlertCircle className="w-4 h-4 text-red-400" />}
+                {item.type === "INFO" && <Bell className="w-4 h-4 text-zinc-400" />}
+                {(item.type === "EVENT" || item.type === "ANNOUNCEMENT") && <Calendar className="w-4 h-4 text-purple-400" />}
+                {item.type === "MATERIAL" && <BookOpen className="w-4 h-4 text-zinc-500" />}
+
                 {isUrgent && (
                     <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse border border-zinc-900" />
                 )}
@@ -163,7 +166,12 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
                                 </Badge>
                                 {isDetected && (
                                     <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/20 animate-pulse border">
-                                        Detected
+                                        AI Summary
+                                    </Badge>
+                                )}
+                                {item.type === 'TEST' && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
+                                        Test
                                     </Badge>
                                 )}
                                 {item.status === "POSTPONED" && (
@@ -176,16 +184,18 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
                                         Cancelled
                                     </Badge>
                                 )}
-                                {isUrgent && !isDetected && item.status !== "POSTPONED" && item.status !== "CANCELLED" && (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-red-500/20 text-red-300 border-red-500/20 border hover:bg-red-500/30">
-                                        Due Soon
-                                    </Badge>
-                                )}
                             </div>
 
-                            <h3 className="font-medium text-zinc-200 text-sm leading-snug">
-                                {item.title}
-                            </h3>
+                            <div className="space-y-1">
+                                <h3 className="font-medium text-zinc-200 text-sm leading-snug">
+                                    {item.summary || item.title}
+                                </h3>
+                                {item.summary && (
+                                    <p className="text-xs text-zinc-500 line-clamp-1">
+                                        Original: {item.title}
+                                    </p>
+                                )}
+                            </div>
 
                             <div className="text-xs text-zinc-500 flex items-center justify-between w-full">
                                 {item.date ? (
