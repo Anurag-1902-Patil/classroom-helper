@@ -1,16 +1,16 @@
 import { NextResponse } from 'next/server'
 import webPush from 'web-push'
 
-webPush.setVapidDetails(
-    process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
-)
-
 export async function POST(request: Request) {
     const { message, subscription } = await request.json()
 
     try {
+        webPush.setVapidDetails(
+            process.env.VAPID_SUBJECT || 'mailto:admin@example.com',
+            process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+            process.env.VAPID_PRIVATE_KEY!
+        )
+
         await webPush.sendNotification(
             subscription,
             JSON.stringify({
