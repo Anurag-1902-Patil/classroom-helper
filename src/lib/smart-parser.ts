@@ -4,6 +4,7 @@ export interface DetectedEvent {
     title: string
     date: Date
     type: "TEST" | "ASSIGNMENT" | "EVENT"
+    status?: "CONFIRMED" | "POSTPONED" | "CANCELLED"
     confidence: number
     sourceText: string
     courseId?: string
@@ -24,6 +25,7 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
                         title: gEvent.title,
                         date: date,
                         type: gEvent.type,
+                        status: gEvent.status || "CONFIRMED",
                         confidence: gEvent.confidence,
                         sourceText: text,
                         courseId

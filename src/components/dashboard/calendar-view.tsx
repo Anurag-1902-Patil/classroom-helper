@@ -83,6 +83,16 @@ export function CalendarView({ items }: CalendarViewProps) {
                                             {item.date && (
                                                 <span>{format(item.date, "h:mm a")}</span>
                                             )}
+                                            {item.status === "POSTPONED" && (
+                                                <Badge variant="outline" className="text-[10px] h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
+                                                    Postponed
+                                                </Badge>
+                                            )}
+                                            {item.status === "CANCELLED" && (
+                                                <Badge variant="outline" className="text-[10px] h-5 border-red-500/50 text-red-400 bg-red-500/10">
+                                                    Cancelled
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

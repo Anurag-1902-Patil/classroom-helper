@@ -103,6 +103,7 @@ export function useClassroomData() {
                                 courseSection: course.section,
                                 courseId: course.id,
                                 link: a.alternateLink,
+                                status: event.status,
                                 priority: "HIGH"
                             })
                         })

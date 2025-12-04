@@ -9,6 +9,7 @@ export interface GeminiEvent {
     title: string
     date: string // ISO string or specific format
     type: "TEST" | "ASSIGNMENT" | "EVENT"
+    status?: "CONFIRMED" | "POSTPONED" | "CANCELLED"
     confidence: number
     summary: string
 }
@@ -37,6 +38,11 @@ export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> 
         4. Return the "date" field as a valid ISO 8601 string (e.g., "2025-12-08T20:00:00.000Z"). 
            - If the event is at 8 PM IST, convert it to UTC or return it with the offset (e.g. 2025-12-08T20:00:00+05:30).
            - If you return UTC, ensure it corresponds to the correct IST time (8 PM IST = 2:30 PM UTC).
+        5. **POSTPONED/RESCHEDULED EVENTS**:
+           - If an event is postponed, set the "date" to the **NEW/FINAL** date.
+           - If the new date is not yet decided ("TBD"), do NOT return the event in the list.
+           - Set the "status" field to "POSTPONED" if it was rescheduled, otherwise "CONFIRMED".
+           - If an event is cancelled, set "status" to "CANCELLED".
         
         Output format (JSON only, no markdown):
         [
@@ -44,6 +50,7 @@ export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> 
                 "title": "Short title of the event",
                 "date": "ISO 8601 date string",
                 "type": "TEST" | "ASSIGNMENT" | "EVENT",
+                "status": "CONFIRMED" | "POSTPONED" | "CANCELLED",
                 "confidence": number (0-1),
                 "summary": "Brief summary of the announcement"
             }

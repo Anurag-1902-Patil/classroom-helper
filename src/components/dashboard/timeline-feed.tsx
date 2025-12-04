@@ -150,7 +150,17 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
                                         Detected
                                     </Badge>
                                 )}
-                                {isUrgent && !isDetected && (
+                                {item.status === "POSTPONED" && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
+                                        Postponed
+                                    </Badge>
+                                )}
+                                {item.status === "CANCELLED" && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-red-500/50 text-red-400 bg-red-500/10">
+                                        Cancelled
+                                    </Badge>
+                                )}
+                                {isUrgent && !isDetected && item.status !== "POSTPONED" && item.status !== "CANCELLED" && (
                                     <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 bg-red-500/20 text-red-300 border-red-500/20 border hover:bg-red-500/30">
                                         Due Soon
                                     </Badge>
