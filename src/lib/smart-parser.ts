@@ -14,6 +14,24 @@ export interface DetectedEvent {
 export async function parseAnnouncementText(text: string, courseId?: string): Promise<DetectedEvent[]> {
     const events: DetectedEvent[] = []
 
+    // 0. Check Cache (Client-Side Only)
+    const cacheKey = `ai-cache-v1-${text.length}-${text.slice(0, 20)}-${text.slice(-20)}`
+    if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(cacheKey)
+        if (cached) {
+            try {
+                const cachedEvents = JSON.parse(cached)
+                // Rehydrate dates
+                return cachedEvents.map((e: any) => ({
+                    ...e,
+                    date: e.date ? new Date(e.date) : undefined
+                }))
+            } catch (e) {
+                console.error("Cache parse error", e)
+            }
+        }
+    }
+
     // 1. Try Gemini Analysis
     try {
         const geminiEvents = await analyzeAnnouncement(text)
@@ -54,6 +72,12 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
                     })
                 }
             })
+
+            // Save to Cache
+            if (typeof window !== 'undefined' && events.length > 0) {
+                localStorage.setItem(cacheKey, JSON.stringify(events))
+            }
+
             return events
         }
     } catch (e) {
