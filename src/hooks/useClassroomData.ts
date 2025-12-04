@@ -9,14 +9,17 @@ export interface CombinedItem {
     summary?: string
     description?: string
     materials?: Material[]
-    date?: Date
-    type: "ASSIGNMENT" | "ANNOUNCEMENT" | "EVENT" | "MATERIAL" | "TEST" | "URGENT" | "INFO"
+    date?: Date // Primary date (due date or test date)
+    startDate?: Date // For date ranges (submission windows)
+    endDate?: Date // For date ranges (submission windows)
+    type: "ASSIGNMENT" | "ANNOUNCEMENT" | "EVENT" | "MATERIAL" | "TEST" | "URGENT" | "INFO" | "SUBMISSION_WINDOW"
     courseName: string
     courseSection?: string
     courseId: string
     link: string
     status?: string
     priority: "HIGH" | "MEDIUM" | "LOW"
+    testType?: string // e.g., "Unit Test 4"
 }
 
 export function useClassroomData() {
@@ -122,33 +125,54 @@ export function useClassroomData() {
 
                 // Process Announcements with Concurrency Limit (Batch of 3)
                 const processAnnouncement = async (a: any) => {
+                    console.log(`📢 Processing announcement from ${course.name}:`, a.text.substring(0, 100))
                     const detectedEvents = await parseAnnouncementText(a.text, course.id)
                     const results: CombinedItem[] = []
 
                     if (detectedEvents.length > 0) {
-                        detectedEvents.forEach(event => {
-                            // event.type is already mapped by parseAnnouncementText
+                        console.log(`✅ Found ${detectedEvents.length} events in announcement`)
+                        detectedEvents.forEach((event, idx) => {
+                            // Map event type
+                            let mappedType: CombinedItem["type"] = "ANNOUNCEMENT"
+                            if (event.type === "TEST") mappedType = "TEST"
+                            else if (event.type === "URGENT") mappedType = "URGENT"
+                            else if (event.type === "INFO") mappedType = "INFO"
+                            else if (event.type === "ASSIGNMENT") mappedType = "ASSIGNMENT"
+                            else if (event.type === "SUBMISSION_WINDOW") mappedType = "SUBMISSION_WINDOW"
+                            
+                            // Determine priority
+                            let priority: "HIGH" | "MEDIUM" | "LOW" = "MEDIUM"
+                            if (event.type === "URGENT" || event.type === "TEST" || event.status === "POSTPONED" || event.status === "CANCELLED") {
+                                priority = "HIGH"
+                            } else if (event.date || event.startDate || event.endDate) {
+                                priority = "MEDIUM"
+                            } else {
+                                priority = "LOW"
+                            }
+
                             results.push({
-                                id: `detected-${a.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                                id: `detected-${a.id}-${idx}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                                 title: event.title,
                                 summary: event.summary,
                                 description: a.text,
                                 materials: a.materials,
-                                date: event.date,
-                                type: event.type === "TEST" ? "TEST" : 
-                                      event.type === "URGENT" ? "URGENT" :
-                                      event.type === "INFO" ? "INFO" :
-                                      event.type === "ASSIGNMENT" ? "ASSIGNMENT" : "ANNOUNCEMENT",
+                                date: event.date || event.endDate, // Use end date for submission windows
+                                startDate: event.startDate,
+                                endDate: event.endDate,
+                                type: mappedType,
                                 courseName: course.name,
                                 courseSection: course.section,
                                 courseId: course.id,
                                 link: a.alternateLink,
                                 status: event.status,
-                                priority: (event.type === "URGENT" || event.type === "TEST") ? "HIGH" : 
-                                         (event.date ? "MEDIUM" : "LOW")
+                                priority: priority,
+                                testType: event.testType
                             })
+
+                            console.log(`  → Event ${idx + 1}: ${event.title} (${mappedType}) - Date: ${event.date || event.endDate || 'No date'} - Status: ${event.status || 'CONFIRMED'}`)
                         })
                     } else {
+                        console.log(`⚠️ No events detected in announcement`)
                         // Regular announcement - still try to extract basic info
                         results.push({
                             id: a.id,
@@ -211,8 +235,17 @@ export function useClassroomData() {
                 if (priorityDiff !== 0) return priorityDiff
                 
                 // Finally by type (TEST and URGENT first)
-                const typePriority = { TEST: 0, URGENT: 1, ASSIGNMENT: 2, INFO: 3, EVENT: 4, ANNOUNCEMENT: 5, MATERIAL: 6 }
-                return (typePriority[a.type] || 99) - (typePriority[b.type] || 99)
+                const typePriority: Record<CombinedItem["type"], number> = { 
+                    TEST: 0, 
+                    URGENT: 1, 
+                    SUBMISSION_WINDOW: 2,
+                    ASSIGNMENT: 3, 
+                    INFO: 4, 
+                    EVENT: 5, 
+                    ANNOUNCEMENT: 6, 
+                    MATERIAL: 7 
+                }
+                return (typePriority[a.type] ?? 99) - (typePriority[b.type] ?? 99)
             })
         },
         enabled: !!accessToken,

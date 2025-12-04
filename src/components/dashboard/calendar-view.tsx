@@ -16,15 +16,41 @@ interface CalendarViewProps {
 export function CalendarView({ items }: CalendarViewProps) {
     const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date())
 
-    // Filter items for the selected date
-    const selectedDateItems = items.filter(item =>
-        item.date && selectedDate && isSameDay(item.date, selectedDate)
-    )
+    // Filter items for the selected date (including date ranges)
+    const selectedDateItems = items.filter(item => {
+        if (!selectedDate) return false
+        
+        // Check if item is on this exact date
+        if (item.date && isSameDay(item.date, selectedDate)) return true
+        
+        // Check if selected date is within date range (submission windows)
+        if (item.startDate && item.endDate) {
+            const selected = selectedDate.getTime()
+            const start = item.startDate.getTime()
+            const end = item.endDate.getTime()
+            return selected >= start && selected <= end
+        }
+        
+        return false
+    })
 
-    // Get days with events for modifiers
-    const daysWithEvents = items
-        .filter(item => item.date)
-        .map(item => item.date!)
+    // Get days with events for modifiers (include all dates in ranges)
+    const daysWithEvents: Date[] = []
+    items.forEach(item => {
+        if (item.date) {
+            daysWithEvents.push(item.date)
+        }
+        // For date ranges, add all days in the range
+        if (item.startDate && item.endDate) {
+            const start = new Date(item.startDate)
+            const end = new Date(item.endDate)
+            const current = new Date(start)
+            while (current <= end) {
+                daysWithEvents.push(new Date(current))
+                current.setDate(current.getDate() + 1)
+            }
+        }
+    })
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -75,23 +101,36 @@ export function CalendarView({ items }: CalendarViewProps) {
                                             item.type === "EVENT" ? "bg-purple-500" : "bg-zinc-500"
                                     )} />
                                     <div className="space-y-1">
-                                        <h4 className="font-medium text-zinc-200">{item.title}</h4>
-                                        <div className="flex items-center gap-2 text-xs text-zinc-400">
-                                            <Badge variant="secondary" className="text-[10px] h-5 bg-zinc-800 text-zinc-300">
-                                                {item.courseName}
-                                            </Badge>
-                                            {item.date && (
-                                                <span>{format(item.date, "h:mm a")}</span>
-                                            )}
+                                        <h4 className="font-medium text-zinc-200">{item.summary || item.title}</h4>
+                                        <div className="flex items-center gap-2 text-xs text-zinc-400 flex-wrap">
+                                            {/* Status badges first */}
                                             {item.status === "POSTPONED" && (
-                                                <Badge variant="outline" className="text-[10px] h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
-                                                    Postponed
+                                                <Badge variant="outline" className="text-[10px] h-5 border-orange-500/50 text-orange-300 bg-orange-500/20">
+                                                    ⚠️ POSTPONED
                                                 </Badge>
                                             )}
                                             {item.status === "CANCELLED" && (
-                                                <Badge variant="outline" className="text-[10px] h-5 border-red-500/50 text-red-400 bg-red-500/10">
-                                                    Cancelled
+                                                <Badge variant="outline" className="text-[10px] h-5 border-red-500/50 text-red-300 bg-red-500/20">
+                                                    ❌ CANCELLED
                                                 </Badge>
+                                            )}
+                                            <Badge variant="secondary" className="text-[10px] h-5 bg-zinc-800 text-zinc-300">
+                                                {item.courseName}
+                                            </Badge>
+                                            {item.type === "TEST" && (
+                                                <Badge variant="outline" className="text-[10px] h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
+                                                    {item.testType || "TEST"}
+                                                </Badge>
+                                            )}
+                                            {item.type === "SUBMISSION_WINDOW" && (
+                                                <Badge variant="outline" className="text-[10px] h-5 border-blue-500/50 text-blue-400 bg-blue-500/10">
+                                                    Submission Window
+                                                </Badge>
+                                            )}
+                                            {item.startDate && item.endDate ? (
+                                                <span>{format(item.startDate, "MMM d")} - {format(item.endDate, "MMM d")}</span>
+                                            ) : item.date && (
+                                                <span>{format(item.date, "h:mm a")}</span>
                                             )}
                                         </div>
                                     </div>

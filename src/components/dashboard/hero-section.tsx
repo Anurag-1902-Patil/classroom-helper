@@ -115,16 +115,34 @@ export function HeroSection() {
                                 <div className="space-y-4 relative z-10">
                                     <div>
                                         <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                            {nextItem.status === "POSTPONED" && (
+                                                <Badge className="bg-orange-500/30 text-orange-300 border-orange-500/50 text-[10px] animate-pulse">
+                                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                                    POSTPONED
+                                                </Badge>
+                                            )}
+                                            {nextItem.status === "CANCELLED" && (
+                                                <Badge className="bg-red-500/30 text-red-300 border-red-500/50 text-[10px]">
+                                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                                    CANCELLED
+                                                </Badge>
+                                            )}
                                             {nextItem.type === "TEST" && (
                                                 <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">
                                                     <TestTube className="w-3 h-3 mr-1" />
-                                                    TEST
+                                                    {nextItem.testType || "TEST"}
                                                 </Badge>
                                             )}
                                             {nextItem.type === "URGENT" && (
                                                 <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">
                                                     <AlertCircle className="w-3 h-3 mr-1" />
                                                     URGENT
+                                                </Badge>
+                                            )}
+                                            {nextItem.type === "SUBMISSION_WINDOW" && (
+                                                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px]">
+                                                    <Calendar className="w-3 h-3 mr-1" />
+                                                    SUBMISSION WINDOW
                                                 </Badge>
                                             )}
                                             {nextItem.summary && (
@@ -145,7 +163,12 @@ export function HeroSection() {
                                             <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-xs border border-zinc-700 font-medium">
                                                 {nextItem.courseSection || nextItem.courseName}
                                             </span>
-                                            {nextItem.date ? (
+                                            {nextItem.startDate && nextItem.endDate ? (
+                                                <span className="text-sm flex items-center gap-1">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {nextItem.startDate.toLocaleDateString()} - {nextItem.endDate.toLocaleDateString()}
+                                                </span>
+                                            ) : nextItem.date ? (
                                                 <span className="text-sm flex items-center gap-1">
                                                     <Calendar className="w-3 h-3" />
                                                     {nextItem.date.toLocaleDateString()}

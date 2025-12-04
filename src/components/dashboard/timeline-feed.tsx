@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { usePushSubscription } from "@/hooks/usePushSubscription"
 import { AlertCircle, BookOpen, Calendar, CheckCircle2, ArrowRight, Clock, Bell, BellRing } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { format, isToday, isTomorrow, isThisWeek, isPast, isFuture } from "date-fns"
+import { format, isToday, isTomorrow, isThisWeek, isPast, isFuture, isAfter, isBefore } from "date-fns"
 import { CalendarView } from "./calendar-view"
 
 export function TimelineFeed() {
@@ -159,29 +159,35 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
                     <div className="flex items-start justify-between gap-4">
                         <div className="space-y-2 w-full">
                             <div className="flex flex-wrap items-center gap-2">
+                                {/* POSTPONED/CANCELLED first - most important */}
+                                {item.status === "POSTPONED" && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-orange-500/50 text-orange-300 bg-orange-500/20 animate-pulse">
+                                        ⚠️ POSTPONED
+                                    </Badge>
+                                )}
+                                {item.status === "CANCELLED" && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-red-500/50 text-red-300 bg-red-500/20">
+                                        ❌ CANCELLED
+                                    </Badge>
+                                )}
                                 <Badge variant="outline" className={cn(
                                     "text-[10px] px-1.5 py-0 h-5 border-zinc-700 bg-zinc-800/50 text-zinc-300",
                                 )}>
                                     {item.courseName}
                                 </Badge>
+                                {item.type === 'TEST' && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
+                                        {item.testType || "TEST"}
+                                    </Badge>
+                                )}
+                                {item.type === "SUBMISSION_WINDOW" && (
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-blue-500/50 text-blue-400 bg-blue-500/10">
+                                        Submission Window
+                                    </Badge>
+                                )}
                                 {isDetected && (
                                     <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border-purple-500/20 animate-pulse border">
                                         AI Summary
-                                    </Badge>
-                                )}
-                                {item.type === 'TEST' && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
-                                        Test
-                                    </Badge>
-                                )}
-                                {item.status === "POSTPONED" && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-orange-500/50 text-orange-400 bg-orange-500/10">
-                                        Postponed
-                                    </Badge>
-                                )}
-                                {item.status === "CANCELLED" && (
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-red-500/50 text-red-400 bg-red-500/10">
-                                        Cancelled
                                     </Badge>
                                 )}
                             </div>
@@ -198,7 +204,12 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
                             </div>
 
                             <div className="text-xs text-zinc-500 flex items-center justify-between w-full">
-                                {item.date ? (
+                                {item.startDate && item.endDate ? (
+                                    <span className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        {format(item.startDate, "MMM d")} - {format(item.endDate, "MMM d, yyyy")}
+                                    </span>
+                                ) : item.date ? (
                                     <span className="flex items-center gap-1">
                                         <Clock className="w-3 h-3" />
                                         {format(item.date, "MMM d, h:mm a")}
