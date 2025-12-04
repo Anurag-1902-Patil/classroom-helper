@@ -120,13 +120,14 @@ export function useClassroomData() {
                     allItems.push(...batchResults)
                 }
 
-                // Process Announcements & Smart Parse
-                const announcementPromises = announcements.map(async (a) => {
+                // Process Announcements with Concurrency Limit (Batch of 3)
+                const processAnnouncement = async (a: any) => {
                     const detectedEvents = await parseAnnouncementText(a.text, course.id)
+                    const results: CombinedItem[] = []
 
                     if (detectedEvents.length > 0) {
                         detectedEvents.forEach(event => {
-                            allItems.push({
+                            results.push({
                                 id: `detected-${a.id}-${event.title.replace(/\s+/g, '-')}`,
                                 title: event.title,
                                 summary: event.summary,
@@ -144,7 +145,7 @@ export function useClassroomData() {
                         })
                     } else {
                         // Regular announcement
-                        allItems.push({
+                        results.push({
                             id: a.id,
                             title: a.text.slice(0, 100) + (a.text.length > 100 ? "..." : ""),
                             description: a.text,
@@ -157,10 +158,18 @@ export function useClassroomData() {
                             priority: "LOW"
                         })
                     }
-                })
+                    return results
+                }
 
-                // Wait for all announcement parsing to complete
-                await Promise.all(announcementPromises)
+                const announcementChunks = chunk(announcements, 3)
+                for (const batch of announcementChunks) {
+                    // Add delay between batches
+                    if (announcementChunks.indexOf(batch) > 0) {
+                        await new Promise(resolve => setTimeout(resolve, 200))
+                    }
+                    const batchResults = await Promise.all(batch.map(processAnnouncement))
+                    batchResults.flat().forEach(item => allItems.push(item))
+                }
 
                 // Process Course Materials
                 materials.forEach((m) => {
