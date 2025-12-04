@@ -58,10 +58,9 @@ export function useClassroomData() {
 
             for (const { course, work, announcements, materials } of results) {
                 // Process Assignments
-                work.forEach((w) => {
+                const assignmentPromises = work.map(async (w) => {
                     let date: Date | undefined
                     if (w.dueDate) {
-                        // API returns {year, month, day}. Month is 1-12.
                         const dateObj = new Date(w.dueDate.year, w.dueDate.month - 1, w.dueDate.day)
                         if (w.dueTime) {
                             dateObj.setHours(w.dueTime.hours, w.dueTime.minutes)
@@ -71,21 +70,52 @@ export function useClassroomData() {
                         }
                     }
 
+                    // AI Parsing for Description
+                    let aiSummary = undefined
+                    let aiType = undefined
+
+                    if (w.description) {
+                        try {
+                            const detectedEvents = await parseAnnouncementText(w.description, course.id)
+                            if (detectedEvents.length > 0) {
+                                const bestEvent = detectedEvents[0] // Take the first/best event
+
+                                // Override date if API date is missing, OR if AI found a specific time/date that seems better?
+                                // For now, let's prioritize API date if it exists, but use AI date if API is missing.
+                                if (!date && bestEvent.date) {
+                                    date = bestEvent.date
+                                }
+
+                                aiSummary = bestEvent.summary
+
+                                // Map AI type if it's significant (e.g. TEST)
+                                if (bestEvent.type === 'TEST' || bestEvent.type === 'URGENT') {
+                                    aiType = bestEvent.type
+                                }
+                            }
+                        } catch (e) {
+                            console.error("Error parsing assignment description:", e)
+                        }
+                    }
+
                     allItems.push({
                         id: w.id,
                         title: w.title,
+                        summary: aiSummary, // Use AI summary
                         description: w.description,
                         materials: w.materials,
                         date,
-                        type: "ASSIGNMENT",
+                        type: aiType || "ASSIGNMENT", // Use AI type if found (e.g. TEST), else default
                         courseName: course.name,
                         courseSection: course.section,
                         courseId: course.id,
                         link: w.alternateLink,
                         status: w.state,
-                        priority: isUrgent(date) ? "HIGH" : "MEDIUM"
+                        priority: (aiType === 'TEST' || aiType === 'URGENT' || isUrgent(date)) ? "HIGH" : "MEDIUM"
                     })
                 })
+
+                await Promise.all(assignmentPromises)
 
                 // Process Announcements & Smart Parse
                 const announcementPromises = announcements.map(async (a) => {
