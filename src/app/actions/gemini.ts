@@ -46,20 +46,6 @@ export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> 
            - DEADLINE/TEST: Exams, quizzes, assignments with a due date. (High Priority)
            - URGENT_UPDATE: Class cancellations, room changes, immediate requirements. (Highest Priority)
            - GENERAL_INFO: Reminders, materials to bring, general announcements. (Standard Priority)
-
-        2. Summary Headline:
-           - MAX 10 WORDS.
-           - Be direct and actionable.
-           - Example: "Math Test Tomorrow: Study Chapter 3" or "Class Cancelled: Stay Home".
-
-        3. Date Resolution:
-           - Assume **India Standard Time (IST)**.
-           - If "Due this Friday", calculate exact ISO date.
-           - If NO specific date is mentioned (e.g., general info), set "due_date_iso" to null.
-           - **Postponed**: If postponed with new date, use it. If no new date, set date to null and status to "POSTPONED".
-
-        4. Noise Filtering:
-           - Ignore "Good morning", "Hope you are well".
            - Focus on the *actionable* content.
 
         Output Format (JSON Array):
