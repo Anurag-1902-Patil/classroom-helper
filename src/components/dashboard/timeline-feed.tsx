@@ -29,13 +29,18 @@ export function TimelineFeed() {
     }
 
     // Group items by date category
+    // Filter out past items (before today)
+    const upcomingItems = items.filter(i => {
+        if (!i.date) return true // Keep items with no date
+        return !isPast(i.date) || isToday(i.date) // Keep today and future
+    })
+
     const groupedItems = {
-        today: items.filter(i => i.date && isToday(i.date)),
-        tomorrow: items.filter(i => i.date && isTomorrow(i.date)),
-        thisWeek: items.filter(i => i.date && isThisWeek(i.date) && !isToday(i.date) && !isTomorrow(i.date) && isFuture(i.date)),
-        upcoming: items.filter(i => i.date && !isThisWeek(i.date) && isFuture(i.date)),
-        noDate: items.filter(i => !i.date),
-        past: items.filter(i => i.date && isPast(i.date) && !isToday(i.date))
+        today: upcomingItems.filter(i => i.date && isToday(i.date)),
+        tomorrow: upcomingItems.filter(i => i.date && isTomorrow(i.date)),
+        thisWeek: upcomingItems.filter(i => i.date && isThisWeek(i.date) && !isToday(i.date) && !isTomorrow(i.date) && isFuture(i.date)),
+        upcoming: upcomingItems.filter(i => i.date && !isThisWeek(i.date) && isFuture(i.date)),
+        noDate: upcomingItems.filter(i => !i.date),
     }
 
     return (
@@ -80,13 +85,6 @@ export function TimelineFeed() {
                     {/* No Date / Others */}
                     {groupedItems.noDate.length > 0 && (
                         <TimelineSection title="No Due Date" items={groupedItems.noDate} />
-                    )}
-
-                    {/* Past (Collapsed or at bottom) */}
-                    {groupedItems.past.length > 0 && (
-                        <div className="opacity-60">
-                            <TimelineSection title="Past" items={groupedItems.past} />
-                        </div>
                     )}
                 </div>
             )}
