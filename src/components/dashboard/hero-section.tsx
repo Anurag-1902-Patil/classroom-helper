@@ -1,20 +1,59 @@
 "use client"
 
+import { useMemo } from "react"
 import { useSession } from "next-auth/react"
 import { useClassroomData } from "@/hooks/useClassroomData"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ArrowRight, Calendar, Clock, LayoutDashboard, BookOpen } from "lucide-react"
+import { ArrowRight, Calendar, Clock, LayoutDashboard, BookOpen, AlertCircle, TestTube } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { NotificationBell } from "./notification-bell"
+import { Badge } from "@/components/ui/badge"
 
 export function HeroSection() {
     const { data: session } = useSession()
     const { data: items, isLoading } = useClassroomData()
 
-    const nextItem = items?.find(i => i.date && i.date > new Date())
+    // Find the next upcoming item (prioritize by date, then by priority)
+    const nextItem = useMemo(() => {
+        if (!items || items.length === 0) return null
+        
+        const now = new Date()
+        
+        // Filter items with future dates or high priority items
+        const upcomingItems = items
+            .filter(i => {
+                // Include items with future dates
+                if (i.date && i.date > now) return true
+                // Include high priority items even without dates
+                if (i.priority === "HIGH" && !i.date) return true
+                // Include today's items
+                if (i.date) {
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    const itemDate = new Date(i.date)
+                    itemDate.setHours(0, 0, 0, 0)
+                    if (itemDate.getTime() === today.getTime()) return true
+                }
+                return false
+            })
+            .sort((a, b) => {
+                // Sort by: date first (earliest first), then by priority
+                if (a.date && b.date) {
+                    return a.date.getTime() - b.date.getTime()
+                }
+                if (a.date && !b.date) return -1
+                if (!a.date && b.date) return 1
+                // Both have no date, sort by priority
+                const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+                return priorityOrder[a.priority] - priorityOrder[b.priority]
+            })
+        
+        return upcomingItems[0] || null
+    }, [items])
+    
     const firstName = session?.user?.name?.split(" ")[0] || "Student"
 
     return (
@@ -75,17 +114,48 @@ export function HeroSection() {
                             ) : nextItem ? (
                                 <div className="space-y-4 relative z-10">
                                     <div>
+                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                            {nextItem.type === "TEST" && (
+                                                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px]">
+                                                    <TestTube className="w-3 h-3 mr-1" />
+                                                    TEST
+                                                </Badge>
+                                            )}
+                                            {nextItem.type === "URGENT" && (
+                                                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px]">
+                                                    <AlertCircle className="w-3 h-3 mr-1" />
+                                                    URGENT
+                                                </Badge>
+                                            )}
+                                            {nextItem.summary && (
+                                                <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px]">
+                                                    AI Summary
+                                                </Badge>
+                                            )}
+                                        </div>
                                         <h2 className="text-3xl font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-2">
-                                            {nextItem.title}
+                                            {nextItem.summary || nextItem.title}
                                         </h2>
-                                        <p className="text-zinc-400 mt-2 flex items-center gap-2">
+                                        {nextItem.summary && nextItem.title !== nextItem.summary && (
+                                            <p className="text-sm text-zinc-500 mt-1 line-clamp-1">
+                                                {nextItem.title}
+                                            </p>
+                                        )}
+                                        <p className="text-zinc-400 mt-3 flex items-center gap-2 flex-wrap">
                                             <span className="px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 text-xs border border-zinc-700 font-medium">
                                                 {nextItem.courseSection || nextItem.courseName}
                                             </span>
-                                            <span className="text-sm flex items-center gap-1">
-                                                <Calendar className="w-3 h-3" />
-                                                {nextItem.date?.toLocaleDateString()} at {nextItem.date?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
+                                            {nextItem.date ? (
+                                                <span className="text-sm flex items-center gap-1">
+                                                    <Calendar className="w-3 h-3" />
+                                                    {nextItem.date.toLocaleDateString()}
+                                                    {nextItem.date.toLocaleTimeString && (
+                                                        <> at {nextItem.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</>
+                                                    )}
+                                                </span>
+                                            ) : (
+                                                <span className="text-sm text-zinc-500">No specific date</span>
+                                            )}
                                         </p>
                                     </div>
 

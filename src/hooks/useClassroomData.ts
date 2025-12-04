@@ -127,24 +127,29 @@ export function useClassroomData() {
 
                     if (detectedEvents.length > 0) {
                         detectedEvents.forEach(event => {
+                            // event.type is already mapped by parseAnnouncementText
                             results.push({
-                                id: `detected-${a.id}-${event.title.replace(/\s+/g, '-')}`,
+                                id: `detected-${a.id}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
                                 title: event.title,
                                 summary: event.summary,
                                 description: a.text,
                                 materials: a.materials,
                                 date: event.date,
-                                type: event.type,
+                                type: event.type === "TEST" ? "TEST" : 
+                                      event.type === "URGENT" ? "URGENT" :
+                                      event.type === "INFO" ? "INFO" :
+                                      event.type === "ASSIGNMENT" ? "ASSIGNMENT" : "ANNOUNCEMENT",
                                 courseName: course.name,
                                 courseSection: course.section,
                                 courseId: course.id,
                                 link: a.alternateLink,
                                 status: event.status,
-                                priority: event.type === "URGENT" || event.type === "TEST" ? "HIGH" : "MEDIUM"
+                                priority: (event.type === "URGENT" || event.type === "TEST") ? "HIGH" : 
+                                         (event.date ? "MEDIUM" : "LOW")
                             })
                         })
                     } else {
-                        // Regular announcement
+                        // Regular announcement - still try to extract basic info
                         results.push({
                             id: a.id,
                             title: a.text.slice(0, 100) + (a.text.length > 100 ? "..." : ""),
@@ -188,11 +193,26 @@ export function useClassroomData() {
                 })
             }
 
-            // Sort by date (items with date first, then undefined)
+            // Sort by: date (earliest first), then priority (HIGH > MEDIUM > LOW), then type (TEST/URGENT > others)
             return allItems.sort((a, b) => {
-                if (!a.date) return 1
-                if (!b.date) return -1
-                return a.date.getTime() - b.date.getTime()
+                // First, prioritize items with dates
+                if (a.date && !b.date) return -1
+                if (!a.date && b.date) return 1
+                
+                // If both have dates, sort by date (earliest first)
+                if (a.date && b.date) {
+                    const dateDiff = a.date.getTime() - b.date.getTime()
+                    if (dateDiff !== 0) return dateDiff
+                }
+                
+                // Then by priority
+                const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 }
+                const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority]
+                if (priorityDiff !== 0) return priorityDiff
+                
+                // Finally by type (TEST and URGENT first)
+                const typePriority = { TEST: 0, URGENT: 1, ASSIGNMENT: 2, INFO: 3, EVENT: 4, ANNOUNCEMENT: 5, MATERIAL: 6 }
+                return (typePriority[a.type] || 99) - (typePriority[b.type] || 99)
             })
         },
         enabled: !!accessToken,
