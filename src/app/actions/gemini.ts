@@ -7,7 +7,8 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 export interface GeminiEvent {
     event_title: string
-    event_type: "TEST" | "QUIZ" | "SUBMISSION" | "EVENT"
+    summary_headline: string
+    event_type: "DEADLINE/TEST" | "URGENT_UPDATE" | "GENERAL_INFO"
     due_date_iso: string | null
     original_text_snippet: string
     confidence_score: "HIGH" | "MEDIUM" | "LOW"
@@ -25,53 +26,49 @@ export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> 
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
 
         const prompt = `
-        System Instruction: Academic Deadline & Event Extractor
+        System Instruction: Academic Event & Summary Parser
 
         Role:
-        You are a precision Academic Event Parser. Your goal is to analyze unstructured text from Google Classroom (announcements, assignment descriptions, comments) and extract specific, actionable academic events with 100% accuracy.
+        You are an AI assistant for a student dashboard. Your goal is to extract events AND generate a concise "Smart Summary" for every announcement.
 
         Input Context:
         reference_date: "${new Date().toISOString()}" (Current ISO Date)
         text: "${text}"
 
         Your Task:
-        Analyze the text. If it contains a hidden or explicit deadline, test date, or submission requirement, extract it.
+        1. Analyze the text for any events, deadlines, or important updates.
+        2. Generate a **Summary Headline** (Max 10 words) that captures the core message.
+        3. Classify the event type strictly.
 
         Extraction Rules:
 
-        1. Event Types:
-           - TEST: Major exams, midterms, finals. (High Priority)
-           - QUIZ: Small assessments, pop quizzes.
-           - SUBMISSION: Homework, projects, essays due.
-           - EVENT: Field trips, guest lectures, special class times.
+        1. Event Types (STRICT):
+           - DEADLINE/TEST: Exams, quizzes, assignments with a due date. (High Priority)
+           - URGENT_UPDATE: Class cancellations, room changes, immediate requirements. (Highest Priority)
+           - GENERAL_INFO: Reminders, materials to bring, general announcements. (Standard Priority)
 
-        2. Date Resolution (CRITICAL):
-           - Assume the user is in **India Standard Time (IST)**.
-           - If a post says "Due this Friday", calculate the exact ISO timestamp (YYYY-MM-DD) based on the reference_date.
-           - If no time is specified, default to 23:59:00 (11:59 PM).
-           - **Postponed Events**: 
-             - If an event is postponed and a NEW DATE is given, use that new date. 
-             - If NO new date is given, set "due_date_iso" to null and "status" to "POSTPONED".
-             - If cancelled, set "status" to "CANCELLED".
+        2. Summary Headline:
+           - MAX 10 WORDS.
+           - Be direct and actionable.
+           - Example: "Math Test Tomorrow: Study Chapter 3" or "Class Cancelled: Stay Home".
 
-        3. Noise Filtering:
-           - Ignore general greetings or vague statements without actionable dates.
-           - **IGNORE** the date the announcement was posted. Only extract the *scheduled* event date.
+        3. Date Resolution:
+           - Assume **India Standard Time (IST)**.
+           - If "Due this Friday", calculate exact ISO date.
+           - If NO specific date is mentioned (e.g., general info), set "due_date_iso" to null.
+           - **Postponed**: If postponed with new date, use it. If no new date, set date to null and status to "POSTPONED".
 
-        4. Confidence Scoring:
-           - HIGH: Date and Topic are explicitly stated.
-           - MEDIUM: Relative date used (e.g., "Quiz next class").
-           - LOW: Vague or ambiguous language.
+        4. Noise Filtering:
+           - Ignore "Good morning", "Hope you are well".
+           - Focus on the *actionable* content.
 
-        Output Format:
-        You must output ONLY a valid JSON array. Do not output markdown formatting.
-
-        JSON Schema:
+        Output Format (JSON Array):
         [
           {
-            "event_title": "String (Concise title)",
-            "event_type": "TEST" | "QUIZ" | "SUBMISSION" | "EVENT",
-            "due_date_iso": "ISO 8601 String (YYYY-MM-DDTHH:mm:ss) or null",
+            "event_title": "String (Full Title)",
+            "summary_headline": "String (Max 10 words)",
+            "event_type": "DEADLINE/TEST" | "URGENT_UPDATE" | "GENERAL_INFO",
+            "due_date_iso": "ISO 8601 String or null",
             "original_text_snippet": "String",
             "confidence_score": "HIGH" | "MEDIUM" | "LOW",
             "requires_prep": Boolean,

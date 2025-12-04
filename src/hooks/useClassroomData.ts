@@ -6,10 +6,11 @@ import { parseAnnouncementText } from "@/lib/smart-parser"
 export interface CombinedItem {
     id: string
     title: string
+    summary?: string
     description?: string
     materials?: Material[]
     date?: Date
-    type: "ASSIGNMENT" | "ANNOUNCEMENT" | "EVENT" | "MATERIAL"
+    type: "ASSIGNMENT" | "ANNOUNCEMENT" | "EVENT" | "MATERIAL" | "TEST" | "URGENT" | "INFO"
     courseName: string
     courseSection?: string
     courseId: string
@@ -95,16 +96,17 @@ export function useClassroomData() {
                             allItems.push({
                                 id: `detected-${a.id}-${event.title.replace(/\s+/g, '-')}`,
                                 title: event.title,
+                                summary: event.summary,
                                 description: a.text,
                                 materials: a.materials,
                                 date: event.date,
-                                type: "EVENT",
+                                type: event.type,
                                 courseName: course.name,
                                 courseSection: course.section,
                                 courseId: course.id,
                                 link: a.alternateLink,
                                 status: event.status,
-                                priority: "HIGH"
+                                priority: event.type === "URGENT" || event.type === "TEST" ? "HIGH" : "MEDIUM"
                             })
                         })
                     } else {

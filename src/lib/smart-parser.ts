@@ -2,8 +2,9 @@ import { analyzeAnnouncement, GeminiEvent } from "@/app/actions/gemini"
 
 export interface DetectedEvent {
     title: string
+    summary?: string // New field for the headline
     date?: Date
-    type: "TEST" | "ASSIGNMENT" | "EVENT"
+    type: "TEST" | "ASSIGNMENT" | "EVENT" | "URGENT" | "INFO"
     status?: "CONFIRMED" | "POSTPONED" | "CANCELLED"
     confidence: number
     sourceText: string
@@ -34,15 +35,16 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
                 if (gEvent.confidence_score === "LOW") confidence = 0.3
 
                 // Map Event Type
-                let type: "TEST" | "ASSIGNMENT" | "EVENT" = "EVENT"
-                if (gEvent.event_type === "TEST" || gEvent.event_type === "QUIZ") type = "TEST"
-                if (gEvent.event_type === "SUBMISSION") type = "ASSIGNMENT"
-                if (gEvent.event_type === "EVENT") type = "EVENT"
+                let type: "TEST" | "ASSIGNMENT" | "EVENT" | "URGENT" | "INFO" = "EVENT"
+                if (gEvent.event_type === "DEADLINE/TEST") type = "TEST"
+                if (gEvent.event_type === "URGENT_UPDATE") type = "URGENT"
+                if (gEvent.event_type === "GENERAL_INFO") type = "INFO"
 
-                // Push if valid date OR if it has a special status (even without date)
-                if (date || gEvent.status === "POSTPONED" || gEvent.status === "CANCELLED") {
+                // Push if valid date OR if it has a special status (even without date) OR if it's Urgent/Info
+                if (date || gEvent.status === "POSTPONED" || gEvent.status === "CANCELLED" || type === "URGENT" || type === "INFO") {
                     events.push({
                         title: gEvent.event_title,
+                        summary: gEvent.summary_headline,
                         date: date,
                         type: type,
                         status: gEvent.status || "CONFIRMED",
