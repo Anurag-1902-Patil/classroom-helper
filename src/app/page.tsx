@@ -5,7 +5,6 @@ import { HeroSection } from "@/components/dashboard/hero-section"
 import { TimelineFeed } from "@/components/dashboard/timeline-feed"
 import { CourseGrid } from "@/components/dashboard/course-grid"
 import { PriorityBanner } from "@/components/dashboard/priority-banner"
-import { SummarySection } from "@/components/dashboard/summary-section"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
@@ -63,8 +62,7 @@ export default function Home() {
           <div className="lg:col-span-2 space-y-12">
             <TimelineFeed />
           </div>
-          <div className="space-y-8">
-            <SummarySection />
+          <div className="space-y-12">
             <CourseGrid />
           </div>
         </div>
