@@ -6,12 +6,13 @@ const apiKey = process.env.GEMINI_API_KEY
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 export interface GeminiEvent {
-    title: string
-    date: string | null // ISO string or specific format
-    type: "TEST" | "ASSIGNMENT" | "EVENT"
+    event_title: string
+    event_type: "TEST" | "QUIZ" | "SUBMISSION" | "EVENT"
+    due_date_iso: string | null
+    original_text_snippet: string
+    confidence_score: "HIGH" | "MEDIUM" | "LOW"
+    requires_prep: boolean
     status?: "CONFIRMED" | "POSTPONED" | "CANCELLED"
-    confidence: number
-    summary: string
 }
 
 export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> {
@@ -24,36 +25,59 @@ export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> 
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
 
         const prompt = `
-        Analyze the following classroom announcement and extract any specific events, tests, or assignments with their due dates or scheduled times.
-        Return the result as a JSON array of objects.
-        
-        Announcement: "${text}"
-        
-        Current Date: ${new Date().toISOString()}
-        
-        IMPORTANT RULES:
-        1. **IGNORE Announcement Date**: Do NOT use the date the announcement was posted or created. Only look for dates referring to when the event/test/assignment is *scheduled* to happen.
-        2. **IST Timezone**: Assume the user is in India Standard Time (IST).
-        3. **Date Format**: Dates in text are likely DD/MM/YYYY.
-        4. **Postponed Events**:
-           - If an event is postponed and a **NEW DATE** is given, use that new date.
-           - If an event is postponed but **NO NEW DATE** is mentioned (e.g., "postponed until further notice"), set "date" to null or empty string, and status to "POSTPONED".
-           - Do NOT default to today's date.
-        5. **Past Events**: If the event date extracted is in the past (before Current Date), still return it, but ensure the date is correct.
-        
-        Output format (JSON only, no markdown):
+        System Instruction: Academic Deadline & Event Extractor
+
+        Role:
+        You are a precision Academic Event Parser. Your goal is to analyze unstructured text from Google Classroom (announcements, assignment descriptions, comments) and extract specific, actionable academic events with 100% accuracy.
+
+        Input Context:
+        reference_date: "${new Date().toISOString()}" (Current ISO Date)
+        text: "${text}"
+
+        Your Task:
+        Analyze the text. If it contains a hidden or explicit deadline, test date, or submission requirement, extract it.
+
+        Extraction Rules:
+
+        1. Event Types:
+           - TEST: Major exams, midterms, finals. (High Priority)
+           - QUIZ: Small assessments, pop quizzes.
+           - SUBMISSION: Homework, projects, essays due.
+           - EVENT: Field trips, guest lectures, special class times.
+
+        2. Date Resolution (CRITICAL):
+           - Assume the user is in **India Standard Time (IST)**.
+           - If a post says "Due this Friday", calculate the exact ISO timestamp (YYYY-MM-DD) based on the reference_date.
+           - If no time is specified, default to 23:59:00 (11:59 PM).
+           - **Postponed Events**: 
+             - If an event is postponed and a NEW DATE is given, use that new date. 
+             - If NO new date is given, set "due_date_iso" to null and "status" to "POSTPONED".
+             - If cancelled, set "status" to "CANCELLED".
+
+        3. Noise Filtering:
+           - Ignore general greetings or vague statements without actionable dates.
+           - **IGNORE** the date the announcement was posted. Only extract the *scheduled* event date.
+
+        4. Confidence Scoring:
+           - HIGH: Date and Topic are explicitly stated.
+           - MEDIUM: Relative date used (e.g., "Quiz next class").
+           - LOW: Vague or ambiguous language.
+
+        Output Format:
+        You must output ONLY a valid JSON array. Do not output markdown formatting.
+
+        JSON Schema:
         [
-            {
-                "title": "Short title of the event",
-                "date": "ISO 8601 date string or null",
-                "type": "TEST" | "ASSIGNMENT" | "EVENT",
-                "status": "CONFIRMED" | "POSTPONED" | "CANCELLED",
-                "confidence": number (0-1),
-                "summary": "Brief summary of the announcement"
-            }
+          {
+            "event_title": "String (Concise title)",
+            "event_type": "TEST" | "QUIZ" | "SUBMISSION" | "EVENT",
+            "due_date_iso": "ISO 8601 String (YYYY-MM-DDTHH:mm:ss) or null",
+            "original_text_snippet": "String",
+            "confidence_score": "HIGH" | "MEDIUM" | "LOW",
+            "requires_prep": Boolean,
+            "status": "CONFIRMED" | "POSTPONED" | "CANCELLED" (Default: CONFIRMED)
+          }
         ]
-        
-        If no specific event is found, return an empty array.
         `
 
         const result = await model.generateContent(prompt)

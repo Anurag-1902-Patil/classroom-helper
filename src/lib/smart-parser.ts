@@ -20,21 +20,33 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
         if (geminiEvents && geminiEvents.length > 0) {
             geminiEvents.forEach(gEvent => {
                 let date: Date | undefined
-                if (gEvent.date) {
-                    const d = new Date(gEvent.date)
+                if (gEvent.due_date_iso) {
+                    const d = new Date(gEvent.due_date_iso)
                     if (!isNaN(d.getTime())) {
                         date = d
                     }
                 }
 
+                // Map Confidence Score String to Number
+                let confidence = 0.5
+                if (gEvent.confidence_score === "HIGH") confidence = 0.9
+                if (gEvent.confidence_score === "MEDIUM") confidence = 0.6
+                if (gEvent.confidence_score === "LOW") confidence = 0.3
+
+                // Map Event Type
+                let type: "TEST" | "ASSIGNMENT" | "EVENT" = "EVENT"
+                if (gEvent.event_type === "TEST" || gEvent.event_type === "QUIZ") type = "TEST"
+                if (gEvent.event_type === "SUBMISSION") type = "ASSIGNMENT"
+                if (gEvent.event_type === "EVENT") type = "EVENT"
+
                 // Push if valid date OR if it has a special status (even without date)
                 if (date || gEvent.status === "POSTPONED" || gEvent.status === "CANCELLED") {
                     events.push({
-                        title: gEvent.title,
+                        title: gEvent.event_title,
                         date: date,
-                        type: gEvent.type,
+                        type: type,
                         status: gEvent.status || "CONFIRMED",
-                        confidence: gEvent.confidence,
+                        confidence: confidence,
                         sourceText: text,
                         courseId
                     })
