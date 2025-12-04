@@ -2,7 +2,7 @@ import { analyzeAnnouncement, GeminiEvent } from "@/app/actions/gemini"
 
 export interface DetectedEvent {
     title: string
-    date: Date
+    date?: Date
     type: "TEST" | "ASSIGNMENT" | "EVENT"
     status?: "CONFIRMED" | "POSTPONED" | "CANCELLED"
     confidence: number
@@ -19,8 +19,16 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
 
         if (geminiEvents && geminiEvents.length > 0) {
             geminiEvents.forEach(gEvent => {
-                const date = new Date(gEvent.date)
-                if (!isNaN(date.getTime())) {
+                let date: Date | undefined
+                if (gEvent.date) {
+                    const d = new Date(gEvent.date)
+                    if (!isNaN(d.getTime())) {
+                        date = d
+                    }
+                }
+
+                // Push if valid date OR if it has a special status (even without date)
+                if (date || gEvent.status === "POSTPONED" || gEvent.status === "CANCELLED") {
                     events.push({
                         title: gEvent.title,
                         date: date,

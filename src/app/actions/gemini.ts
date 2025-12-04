@@ -7,7 +7,7 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null
 
 export interface GeminiEvent {
     title: string
-    date: string // ISO string or specific format
+    date: string | null // ISO string or specific format
     type: "TEST" | "ASSIGNMENT" | "EVENT"
     status?: "CONFIRMED" | "POSTPONED" | "CANCELLED"
     confidence: number
@@ -31,24 +31,21 @@ export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> 
         
         Current Date: ${new Date().toISOString()}
         
-        IMPORTANT:
-        1. Assume the user is in India Standard Time (IST).
-        2. Dates in the text are likely in DD/MM/YYYY format (e.g., 08/12/2025 is December 8th, 2025).
-        3. If a time is mentioned (e.g., "8 pm"), combine it with the date.
-        4. Return the "date" field as a valid ISO 8601 string (e.g., "2025-12-08T20:00:00.000Z"). 
-           - If the event is at 8 PM IST, convert it to UTC or return it with the offset (e.g. 2025-12-08T20:00:00+05:30).
-           - If you return UTC, ensure it corresponds to the correct IST time (8 PM IST = 2:30 PM UTC).
-        5. **POSTPONED/RESCHEDULED EVENTS**:
-           - If an event is postponed, set the "date" to the **NEW/FINAL** date.
-           - If the new date is not yet decided ("TBD"), do NOT return the event in the list.
-           - Set the "status" field to "POSTPONED" if it was rescheduled, otherwise "CONFIRMED".
-           - If an event is cancelled, set "status" to "CANCELLED".
+        IMPORTANT RULES:
+        1. **IGNORE Announcement Date**: Do NOT use the date the announcement was posted or created. Only look for dates referring to when the event/test/assignment is *scheduled* to happen.
+        2. **IST Timezone**: Assume the user is in India Standard Time (IST).
+        3. **Date Format**: Dates in text are likely DD/MM/YYYY.
+        4. **Postponed Events**:
+           - If an event is postponed and a **NEW DATE** is given, use that new date.
+           - If an event is postponed but **NO NEW DATE** is mentioned (e.g., "postponed until further notice"), set "date" to null or empty string, and status to "POSTPONED".
+           - Do NOT default to today's date.
+        5. **Past Events**: If the event date extracted is in the past (before Current Date), still return it, but ensure the date is correct.
         
         Output format (JSON only, no markdown):
         [
             {
                 "title": "Short title of the event",
-                "date": "ISO 8601 date string",
+                "date": "ISO 8601 date string or null",
                 "type": "TEST" | "ASSIGNMENT" | "EVENT",
                 "status": "CONFIRMED" | "POSTPONED" | "CANCELLED",
                 "confidence": number (0-1),
@@ -56,7 +53,7 @@ export async function analyzeAnnouncement(text: string): Promise<GeminiEvent[]> 
             }
         ]
         
-        If no specific event with a date is found, return an empty array.
+        If no specific event is found, return an empty array.
         `
 
         const result = await model.generateContent(prompt)
