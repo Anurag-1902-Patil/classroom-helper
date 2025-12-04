@@ -152,16 +152,31 @@ export interface CourseWorkMaterial {
 }
 
 export async function fetchAnnouncements(accessToken: string, courseId: string): Promise<Announcement[]> {
-    const res = await fetch(`${BASE_URL}/courses/${courseId}/announcements?pageSize=10`, {
-        headers: {
-            Authorization: `Bearer ${accessToken}`,
-        },
-    })
-    if (!res.ok) {
-        throw new Error(`Failed to fetch announcements for ${courseId}: ${res.statusText}`)
-    }
-    const data = await res.json()
-    return data.announcements || []
+    const allAnnouncements: Announcement[] = []
+    let pageToken: string | undefined = undefined
+    
+    do {
+        const url: string = `${BASE_URL}/courses/${courseId}/announcements?pageSize=100${pageToken ? `&pageToken=${pageToken}` : ''}`
+        const res: Response = await fetch(url, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        })
+        
+        if (!res.ok) {
+            throw new Error(`Failed to fetch announcements for ${courseId}: ${res.statusText}`)
+        }
+        
+        const data: { announcements?: Announcement[], nextPageToken?: string } = await res.json()
+        if (data.announcements) {
+            allAnnouncements.push(...data.announcements)
+        }
+        
+        pageToken = data.nextPageToken
+    } while (pageToken)
+    
+    console.log(`📢 Fetched ${allAnnouncements.length} announcements for course ${courseId}`)
+    return allAnnouncements
 }
 
 export async function fetchCourseWorkMaterials(accessToken: string, courseId: string): Promise<CourseWorkMaterial[]> {

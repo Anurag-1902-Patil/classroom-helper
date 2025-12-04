@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useSession } from "next-auth/react"
 import { fetchCourses, fetchCourseWork, fetchAnnouncements, fetchCourseWorkMaterials, Material } from "@/lib/api/classroom"
-import { parseAnnouncementText } from "@/lib/smart-parser"
+import { parseAnnouncementText } from "@/lib/smart-parser-client"
 
 export interface CombinedItem {
     id: string
@@ -124,14 +124,16 @@ export function useClassroomData() {
                 }
 
                 // Process Announcements with Concurrency Limit (Batch of 3)
+                console.log(`📋 Processing ${announcements.length} announcements for course: ${course.name}`)
                 const processAnnouncement = async (a: any) => {
-                    console.log(`📢 Processing announcement from ${course.name}:`, a.text.substring(0, 100))
-                    const detectedEvents = await parseAnnouncementText(a.text, course.id)
-                    const results: CombinedItem[] = []
+                    console.log(`📢 Processing announcement from ${course.name}:`, a.text?.substring(0, 100) || 'No text')
+                    try {
+                        const detectedEvents = await parseAnnouncementText(a.text || '', course.id)
+                        const results: CombinedItem[] = []
 
-                    if (detectedEvents.length > 0) {
-                        console.log(`✅ Found ${detectedEvents.length} events in announcement`)
-                        detectedEvents.forEach((event, idx) => {
+                        if (detectedEvents.length > 0) {
+                            console.log(`✅ Found ${detectedEvents.length} events in announcement`)
+                            detectedEvents.forEach((event, idx) => {
                             // Map event type
                             let mappedType: CombinedItem["type"] = "ANNOUNCEMENT"
                             if (event.type === "TEST") mappedType = "TEST"
@@ -169,25 +171,41 @@ export function useClassroomData() {
                                 testType: event.testType
                             })
 
-                            console.log(`  → Event ${idx + 1}: ${event.title} (${mappedType}) - Date: ${event.date || event.endDate || 'No date'} - Status: ${event.status || 'CONFIRMED'}`)
-                        })
-                    } else {
-                        console.log(`⚠️ No events detected in announcement`)
-                        // Regular announcement - still try to extract basic info
-                        results.push({
+                                console.log(`  → Event ${idx + 1}: ${event.title} (${mappedType}) - Date: ${event.date || event.endDate || 'No date'} - Status: ${event.status || 'CONFIRMED'}`)
+                            })
+                        } else {
+                            console.log(`⚠️ No events detected in announcement, but still showing as announcement`)
+                            // Regular announcement - ALWAYS show it even if no events detected
+                            results.push({
+                                id: a.id,
+                                title: a.text?.slice(0, 100) + (a.text?.length > 100 ? "..." : "") || "Untitled Announcement",
+                                description: a.text,
+                                materials: a.materials,
+                                type: "ANNOUNCEMENT",
+                                courseName: course.name,
+                                courseSection: course.section,
+                                courseId: course.id,
+                                link: a.alternateLink,
+                                priority: "LOW"
+                            })
+                        }
+                        return results
+                    } catch (error) {
+                        console.error(`❌ Error processing announcement:`, error)
+                        // Even if parsing fails, show the announcement
+                        return [{
                             id: a.id,
-                            title: a.text.slice(0, 100) + (a.text.length > 100 ? "..." : ""),
+                            title: a.text?.slice(0, 100) + (a.text?.length > 100 ? "..." : "") || "Untitled Announcement",
                             description: a.text,
                             materials: a.materials,
-                            type: "ANNOUNCEMENT",
+                            type: "ANNOUNCEMENT" as const,
                             courseName: course.name,
                             courseSection: course.section,
                             courseId: course.id,
                             link: a.alternateLink,
-                            priority: "LOW"
-                        })
+                            priority: "LOW" as const
+                        }]
                     }
-                    return results
                 }
 
                 const announcementChunks = chunk(announcements, 3)

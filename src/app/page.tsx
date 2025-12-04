@@ -5,6 +5,7 @@ import { HeroSection } from "@/components/dashboard/hero-section"
 import { TimelineFeed } from "@/components/dashboard/timeline-feed"
 import { CourseGrid } from "@/components/dashboard/course-grid"
 import { PriorityBanner } from "@/components/dashboard/priority-banner"
+import { DebugInfo } from "@/components/dashboard/debug-info"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 
@@ -64,6 +65,14 @@ export default function Home() {
           </div>
           <div className="space-y-12">
             <CourseGrid />
+            {process.env.NODE_ENV === "development" && (
+              <div className="fixed bottom-4 right-4 z-50 w-80">
+                <div className="bg-yellow-900/90 backdrop-blur-sm border border-yellow-800 rounded-lg p-4 text-xs max-h-96 overflow-y-auto">
+                  <div className="font-bold mb-2">🐛 Debug Panel</div>
+                  <DebugInfo />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
