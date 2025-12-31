@@ -19,9 +19,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     callbacks: {
         async session({ session, token }) {
             if (token) {
-                // @ts-expect-error - Adding custom property
                 session.accessToken = token.accessToken
-                // @ts-expect-error - Adding custom property
                 session.refreshToken = token.refreshToken
             }
             return session

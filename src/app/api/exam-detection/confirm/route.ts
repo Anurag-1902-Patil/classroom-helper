@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's Google access token from session
-    // @ts-expect-error - session.accessToken is added in auth.ts
     const accessToken = session.accessToken;
     if (!accessToken) {
       return NextResponse.json(
