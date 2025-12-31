@@ -159,4 +159,5 @@ Extract event details from the following user input:`;
   }
 }
 
-export { GeminiService, ExtractedEvent, EventExtractionResult };
+export { GeminiService };
+export type { ExtractedEvent, EventExtractionResult };
