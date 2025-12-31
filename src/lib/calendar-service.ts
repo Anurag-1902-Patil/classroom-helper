@@ -62,11 +62,10 @@ class CalendarService {
 
       const calendarEvent: CalendarEvent = {
         summary: extractedEvent.event_title,
-        description: `Auto-detected ${extractedEvent.event_type} using AI\n${
-          extractedEvent.additional_notes
+        description: `Auto-detected ${extractedEvent.event_type} using AI\n${extractedEvent.additional_notes
             ? `Additional notes: ${extractedEvent.additional_notes}`
             : ""
-        }`,
+          }`,
         start: {
           dateTime: startDateTime,
           timeZone: this.timezone,
@@ -175,4 +174,5 @@ class CalendarService {
   }
 }
 
-export { CalendarService, CalendarEvent, CalendarEventResponse };
+export { CalendarService };
+export type { CalendarEvent, CalendarEventResponse };
