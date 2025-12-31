@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { auth } from "@/lib/auth";
 import { CalendarService } from "@/lib/calendar-service";
 import { ExtractedEvent } from "@/lib/gemini-service";
 
@@ -41,7 +41,7 @@ import { ExtractedEvent } from "@/lib/gemini-service";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession();
+    const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, message: "Not authenticated" },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { auth } from "@/lib/auth";
 import { GeminiService } from "@/lib/gemini-service";
 
 /**
@@ -39,7 +39,7 @@ import { GeminiService } from "@/lib/gemini-service";
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const session = await getServerSession();
+    const session = await auth();
     if (!session?.user) {
       return NextResponse.json(
         { success: false, reason: "UNAUTHORIZED", message: "Not authenticated" },
