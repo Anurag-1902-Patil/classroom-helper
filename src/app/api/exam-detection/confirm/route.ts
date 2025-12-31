@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user's Google access token from session
-    const account = (session as any).account;
-    if (!account?.access_token) {
+    // @ts-expect-error - session.accessToken is added in auth.ts
+    const accessToken = session.accessToken;
+    if (!accessToken) {
       return NextResponse.json(
         { success: false, message: "Google Calendar access not available" },
         { status: 401 }
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize Calendar service with user's access token
     const calendarService = new CalendarService(
-      account.access_token,
+      accessToken as string,
       userTimezone
     );
 

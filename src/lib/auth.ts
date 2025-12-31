@@ -8,7 +8,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
             authorization: {
                 params: {
-                    scope: "openid email profile https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/classroom.announcements.readonly https://www.googleapis.com/auth/classroom.push-notifications https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly",
+                    scope: "openid email profile https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/classroom.announcements.readonly https://www.googleapis.com/auth/classroom.push-notifications https://www.googleapis.com/auth/classroom.courseworkmaterials.readonly https://www.googleapis.com/auth/calendar.events",
                     prompt: "consent",
                     access_type: "offline",
                     response_type: "code",
