@@ -86,10 +86,19 @@ export function ChatAssistant() {
                         if (criteria.type === "ASSIGNMENT" && item.type !== "ASSIGNMENT") return false
                     }
 
-                    // Filter by Topic (Title/Desc/TopicID)
-                    if (criteria.topic) {
+                    // Filter by Topic Keywords (Fuzzy OR Match)
+                    // "Unit 3 - 5" -> ["Unit 3", "Unit 4", "Unit 5"] -> Match ANY
+                    if (criteria.keywords && Array.isArray(criteria.keywords) && criteria.keywords.length > 0) {
+                        const content = (item.title + " " + (item.description || "") + " " + item.courseName).toLowerCase()
+
+                        const hasKeywordMatch = criteria.keywords.some((k: string) => content.includes(k.toLowerCase()))
+
+                        if (!hasKeywordMatch) return false
+                    }
+                    // Fallback for old "topic" (legacy support just in case)
+                    else if (criteria.topic) {
                         const query = criteria.topic.toLowerCase()
-                        const content = (item.title + " " + (item.description || "") + " " + (item.courseName)).toLowerCase()
+                        const content = (item.title + " " + (item.description || "") + " " + item.courseName).toLowerCase()
                         if (!content.includes(query)) return false
                     }
 
@@ -137,7 +146,7 @@ export function ChatAssistant() {
             }
 
         } catch (error) {
-            console.error(error)
+            console.error("Chat Error:", error)
             setMessages(prev => [...prev, {
                 id: Date.now().toString(),
                 role: "assistant",

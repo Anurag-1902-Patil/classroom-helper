@@ -27,7 +27,7 @@ export async function POST(req: Request) {
                         "reply": "Optional conversational reply (only for greetings or unknown)",
                         "criteria": {
                             "courseName": string | null, // e.g., "Biology", "Math"
-                            "topic": string | null, // e.g., "Genetics", "Unit 5"
+                            "keywords": string[] | null, // Array of search terms: ["Unit 3", "Unit 4", "Genetics"]
                             "type": "ASSIGNMENT" | "TEST" | "MATERIAL" | null,
                             "fileFormat": "PDF" | "PPT" | "DOC" | "FORM" | "VIDEO" | null
                         }
@@ -42,7 +42,8 @@ export async function POST(req: Request) {
                     - If the user asks "Do I have a test?", treat it as intent="search" with type="TEST".
                     - If the user says "Hi" or "Hello", treat as intent="greeting".
                     - Extract the specific course name if mentioned.
-                    - Extract keywords like "Unit 5", "Chapter 1", "DNA" into "topic".
+                    - **CRITICAL: Expand ranges.** If user says "Unit 3 - 5", return keywords: ["Unit 3", "Unit 4", "Unit 5"].
+                    - Extract all important topics into "keywords".
                     - Return ONLY raw JSON. No markdown formatting.`
                 },
                 {
