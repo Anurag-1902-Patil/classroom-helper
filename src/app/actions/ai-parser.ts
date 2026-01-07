@@ -80,7 +80,7 @@ Analyze the announcement and return ONLY raw JSON.`
         { role: "system", content: "You are a JSON-only response bot. Output valid JSON arrays only." },
         { role: "user", content: prompt }
       ],
-      model: "llama3-8b-8192",
+      model: "llama-3.3-70b-versatile",
       temperature: 0,
       response_format: { type: "json_object" }
     });

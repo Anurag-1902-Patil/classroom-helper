@@ -27,7 +27,7 @@ class GeminiService {
     // If no API key is provided here, it will try to use the one from process.env inside Groq internal logic
     // But usually passing it explicitly is safer if we have it injected
     this.groq = new Groq({ apiKey });
-    this.model = "llama3-8b-8192";
+    this.model = "llama-3.3-70b-versatile";
   }
 
   /**
