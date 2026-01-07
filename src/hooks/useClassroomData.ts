@@ -82,7 +82,7 @@ export function useClassroomData() {
                         try {
                             // Add a small delay to prevent hitting rate limits instantly
                             await new Promise(resolve => setTimeout(resolve, 100))
-                            const detectedEvents = await parseAnnouncementText(w.description, course.id)
+                            const detectedEvents = await parseAnnouncementText(w.description, course.id, w.creationTime)
                             if (detectedEvents.length > 0) {
                                 const bestEvent = detectedEvents[0]
                                 if (!date && bestEvent.date) {
