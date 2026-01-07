@@ -7,7 +7,6 @@ import { CourseGrid } from "@/components/dashboard/course-grid"
 import { PriorityBanner } from "@/components/dashboard/priority-banner"
 import { DebugInfo } from "@/components/dashboard/debug-info"
 import { Button } from "@/components/ui/button"
-import { ChatAssistant } from "@/components/dashboard/chat-assistant"
 import { motion } from "framer-motion"
 
 export default function Home() {
@@ -79,7 +78,7 @@ export default function Home() {
       </main>
 
       {/* Floating Chat Assistant */}
-      <ChatAssistant />
+
     </div>
   )
 }
