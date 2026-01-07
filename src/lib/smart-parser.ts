@@ -51,55 +51,38 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
                 let startDate: Date | undefined
                 let endDate: Date | undefined
 
-                // Parse due date
-                if (pEvent.due_date_iso) {
-                    const d = new Date(pEvent.due_date_iso)
+                // Parse dates from new Gemini interface
+                if (pEvent.date) {
+                    const d = new Date(pEvent.date)
                     if (!isNaN(d.getTime())) {
                         date = d
                     }
                 }
 
-                // Parse start date (for date ranges)
-                if (pEvent.start_date_iso) {
-                    const sd = new Date(pEvent.start_date_iso)
+                if (pEvent.startDate) {
+                    const sd = new Date(pEvent.startDate)
                     if (!isNaN(sd.getTime())) {
                         startDate = sd
                     }
                 }
 
-                // Parse end date (for date ranges)
-                if (pEvent.due_date_iso && pEvent.event_type === "SUBMISSION_WINDOW") {
-                    const ed = new Date(pEvent.due_date_iso)
+                if (pEvent.endDate) {
+                    const ed = new Date(pEvent.endDate)
                     if (!isNaN(ed.getTime())) {
                         endDate = ed
-                        // For submission windows, the due_date_iso is actually the end date
-                        if (!date) date = ed
-                    }
-                } else if (pEvent.due_date_iso) {
-                    const ed = new Date(pEvent.due_date_iso)
-                    if (!isNaN(ed.getTime())) {
-                        date = ed
                     }
                 }
 
-                // Map Confidence Score String to Number
-                let confidence = 0.5
-                if (pEvent.confidence_score === "HIGH") confidence = 0.9
-                if (pEvent.confidence_score === "MEDIUM") confidence = 0.6
-                if (pEvent.confidence_score === "LOW") confidence = 0.3
+                // Confidence score (default to medium)
+                let confidence = 0.6
 
-                // Map Event Type
-                let type: DetectedEvent["type"] = "EVENT"
-                if (pEvent.event_type === "DEADLINE/TEST") type = "TEST"
-                if (pEvent.event_type === "URGENT_UPDATE") type = "URGENT"
-                if (pEvent.event_type === "GENERAL_INFO") type = "INFO"
-                if (pEvent.event_type === "SUBMISSION_WINDOW") type = "SUBMISSION_WINDOW"
+                // Type is already in correct format from Gemini
+                let type: DetectedEvent["type"] = pEvent.type || "EVENT"
 
                 // Create event(s) - if it's a date range, create start and end events
                 const baseEvent = {
-                    title: pEvent.event_title,
-                    summary: pEvent.summary_headline,
-                    description: pEvent.original_text_snippet,
+                    title: pEvent.title,
+                    summary: pEvent.summary,
                     date: date || endDate,
                     startDate: startDate,
                     endDate: endDate,
@@ -108,7 +91,7 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
                     confidence: confidence,
                     sourceText: text,
                     courseId,
-                    testType: pEvent.test_type
+                    testType: pEvent.testType
                 }
 
                 // Always include the event if:
@@ -116,10 +99,10 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
                 // - It's POSTPONED/CANCELLED (important status change)
                 // - It's URGENT
                 // - It's a submission window
-                if (date || startDate || endDate || 
-                    pEvent.status === "POSTPONED" || 
-                    pEvent.status === "CANCELLED" || 
-                    type === "URGENT" || 
+                if (date || startDate || endDate ||
+                    pEvent.status === "POSTPONED" ||
+                    pEvent.status === "CANCELLED" ||
+                    type === "URGENT" ||
                     type === "SUBMISSION_WINDOW") {
                     events.push(baseEvent)
                 }
