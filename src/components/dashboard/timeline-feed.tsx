@@ -36,10 +36,10 @@ export function TimelineFeed() {
 
     // Group items by date category
     // Filter out past items (before today)
-    const upcomingItems = items // .filter(i => {
-    //    if (!i.date) return true // Keep items with no date
-    //    return !isPast(i.date) || isToday(i.date) // Keep today and future
-    // })
+    const upcomingItems = items.filter(i => {
+        if (!i.date) return true // Keep items with no date
+        return !isPast(i.date) || isToday(i.date) // Keep today and future
+    })
 
     const groupedItems = {
         today: upcomingItems.filter(i => i.date && isToday(i.date)),

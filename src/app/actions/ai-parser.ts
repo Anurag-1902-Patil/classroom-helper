@@ -54,7 +54,12 @@ YOUR TASK - Extract EVERYTHING relative to the Announcement Date:
 
 3. **DATE PARSING RULES**:
    - "Monday 08/12" → Use Reference Year unless 08/12 is in past relative to Announcement Date.
-   - "Next week" → Add 7 days to Announcement Date.
+   - "Next week" / "Coming week" → Add 7 days to Announcement Date only. DO NOT use Current Date.
+   - Example: Posted Nov 7, 2025 + "Coming week" = Nov 14, 2025.
+
+4. **LOGIC CHECK:**
+   - If the calculated date is BEFORE the current real-world date (today), it is a PAST event.
+   - Still extract it, but ensure the ISO date is correct (in the past).
 
 OUTPUT FORMAT (JSON Array):
 [
