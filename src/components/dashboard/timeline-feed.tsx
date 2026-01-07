@@ -14,10 +14,13 @@ import { cn } from "@/lib/utils"
 import { format, isToday, isTomorrow, isThisWeek, isPast, isFuture, isAfter, isBefore } from "date-fns"
 import { CalendarView } from "./calendar-view"
 
+import { TestDetailsDialog } from "./test-details-dialog"
+
 export function TimelineFeed() {
     const { data: items, isLoading } = useClassroomData()
     const [view, setView] = useState<"timeline" | "calendar">("timeline")
     const { subscribeToPush, isSupported, subscription } = usePushSubscription()
+    const [selectedTest, setSelectedTest] = useState<CombinedItem | null>(null)
 
     if (isLoading) {
         return <TimelineSkeleton />
@@ -44,6 +47,14 @@ export function TimelineFeed() {
         thisWeek: upcomingItems.filter(i => i.date && isThisWeek(i.date) && !isToday(i.date) && !isTomorrow(i.date) && isFuture(i.date)),
         upcoming: upcomingItems.filter(i => i.date && !isThisWeek(i.date) && isFuture(i.date)),
         noDate: upcomingItems.filter(i => !i.date),
+    }
+
+    const handleItemClick = (item: CombinedItem) => {
+        if (item.type === "TEST" || (item.type === "URGENT" && item.testType)) {
+            setSelectedTest(item)
+        } else if (item.link) {
+            window.open(item.link, "_blank")
+        }
     }
 
     return (
@@ -80,50 +91,60 @@ export function TimelineFeed() {
                 <div className="space-y-8">
                     {/* Today */}
                     {groupedItems.today.length > 0 && (
-                        <TimelineSection title="Today" items={groupedItems.today} />
+                        <TimelineSection title="Today" items={groupedItems.today} onItemClick={handleItemClick} />
                     )}
 
                     {/* Tomorrow */}
                     {groupedItems.tomorrow.length > 0 && (
-                        <TimelineSection title="Tomorrow" items={groupedItems.tomorrow} />
+                        <TimelineSection title="Tomorrow" items={groupedItems.tomorrow} onItemClick={handleItemClick} />
                     )}
 
                     {/* This Week */}
                     {groupedItems.thisWeek.length > 0 && (
-                        <TimelineSection title="This Week" items={groupedItems.thisWeek} />
+                        <TimelineSection title="This Week" items={groupedItems.thisWeek} onItemClick={handleItemClick} />
                     )}
 
                     {/* Upcoming */}
                     {groupedItems.upcoming.length > 0 && (
-                        <TimelineSection title="Upcoming" items={groupedItems.upcoming} />
+                        <TimelineSection title="Upcoming" items={groupedItems.upcoming} onItemClick={handleItemClick} />
                     )}
 
                     {/* No Date / Others */}
                     {groupedItems.noDate.length > 0 && (
-                        <TimelineSection title="No Due Date" items={groupedItems.noDate} />
+                        <TimelineSection title="No Due Date" items={groupedItems.noDate} onItemClick={handleItemClick} />
                     )}
                 </div>
             )}
+
+            <TestDetailsDialog
+                open={!!selectedTest}
+                onOpenChange={(open) => !open && setSelectedTest(null)}
+                item={selectedTest!}
+                allItems={items}
+            />
         </div>
     )
 }
 
-function TimelineSection({ title, items }: { title: string, items: CombinedItem[] }) {
+function TimelineSection({ title, items, onItemClick }: { title: string, items: CombinedItem[], onItemClick: (item: CombinedItem) => void }) {
     return (
         <div className="space-y-4">
             <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider pl-2 border-l-2 border-zinc-800">{title}</h3>
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-zinc-800 before:to-transparent">
                 {items.map((item, index) => (
-                    <TimelineItem key={item.id} item={item} index={index} />
+                    <TimelineItem key={item.id} item={item} index={index} onClick={() => onItemClick(item)} />
                 ))}
             </div>
         </div>
     )
 }
 
-function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
+function TimelineItem({ item, index, onClick }: { item: CombinedItem; index: number; onClick: () => void }) {
     const isDetected = item.id.startsWith("detected-") || !!item.summary // It's detected if it has a summary or ID prefix
     const isUrgent = item.priority === "HIGH"
+
+    // Check if it's a test that triggers the dialog
+    const isInteractiveTest = item.type === "TEST" || (item.type === "URGENT" && item.testType);
 
     return (
         <motion.div
@@ -151,10 +172,11 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
 
             {/* Card */}
             <Card className={cn(
-                "w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-zinc-900/40 backdrop-blur-sm border-zinc-800/60 hover:bg-zinc-900/60 transition-all duration-300 hover:border-zinc-700",
-                isDetected && "border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]",
+                "w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-zinc-900/40 backdrop-blur-sm border-zinc-800/60 transition-all duration-300",
+                isInteractiveTest ? "cursor-pointer hover:bg-zinc-900/80 hover:border-purple-500/30 hover:shadow-[0_0_15px_rgba(168,85,247,0.1)]" : "hover:bg-zinc-900/60 hover:border-zinc-700",
+                isDetected && !isInteractiveTest && "border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.1)]",
                 isUrgent && !isDetected && "border-red-500/30"
-            )}>
+            )} onClick={onClick}>
                 <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                         <div className="space-y-2 w-full">
@@ -220,10 +242,13 @@ function TimelineItem({ item, index }: { item: CombinedItem; index: number }) {
                             </div>
                         </div>
 
-                        {item.link && (
-                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-zinc-600 hover:text-zinc-300 transition-colors mt-1">
+                        {item.link && !isInteractiveTest && (
+                            <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-zinc-600 hover:text-zinc-300 transition-colors mt-1" onClick={(e) => e.stopPropagation()}>
                                 <ArrowRight className="w-4 h-4" />
                             </a>
+                        )}
+                        {isInteractiveTest && (
+                            <ArrowRight className="w-4 h-4 text-purple-500/50 group-hover:text-purple-400 transition-colors mt-1" />
                         )}
                     </div>
                 </CardContent>
