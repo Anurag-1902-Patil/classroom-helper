@@ -65,7 +65,25 @@ export function useClassroomData() {
                 const processAssignment = async (w: any): Promise<CombinedItem> => {
                     let date: Date | undefined
                     if (w.dueDate) {
-                        const dateObj = new Date(w.dueDate.year, w.dueDate.month - 1, w.dueDate.day)
+                        let year = w.dueDate.year
+                        const month = w.dueDate.month - 1
+                        const day = w.dueDate.day
+
+                        // Smart Year Correction: If assignment was created in 2025 but due date is 2026+,
+                        // and it's already January 2026, assume the year is wrong (teacher meant 2025)
+                        if (w.creationTime) {
+                            const creationYear = new Date(w.creationTime).getFullYear()
+                            const currentYear = new Date().getFullYear()
+
+                            // If created in 2025 and due date is 2026+, but we're now in 2026
+                            if (creationYear === 2025 && year >= 2026 && currentYear >= 2026) {
+                                // Likely the teacher meant 2025, not 2026
+                                year = 2025
+                                console.log(`⚠️ Corrected year from ${w.dueDate.year} to ${year} for assignment created in 2025: ${w.title}`)
+                            }
+                        }
+
+                        const dateObj = new Date(year, month, day)
                         if (w.dueTime) {
                             dateObj.setHours(w.dueTime.hours, w.dueTime.minutes)
                         }
