@@ -5,12 +5,17 @@ import { NextResponse } from "next/server"
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
 export async function POST(req: Request) {
+    console.log("DEBUG: POST /api/chat-intent called")
+
     if (!process.env.GEMINI_API_KEY) {
+        console.error("DEBUG: GEMINI_API_KEY is missing in process.env")
         return NextResponse.json({ error: "Gemini API Key missing" }, { status: 500 })
     }
+    console.log("DEBUG: API Key present (length: " + process.env.GEMINI_API_KEY.length + ")")
 
     try {
         const { message } = await req.json()
+        console.log("DEBUG: Received message:", message)
         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
         const prompt = `
@@ -52,8 +57,9 @@ export async function POST(req: Request) {
 
         return NextResponse.json(JSON.parse(cleanText))
 
-    } catch (error) {
-        console.error("Chat parsing error:", error)
-        return NextResponse.json({ error: "Failed to parse query" }, { status: 500 })
+    } catch (error: any) {
+        console.error("DEBUG: Chat parsing error full details:", error)
+        console.error("DEBUG: Error message:", error.message)
+        return NextResponse.json({ error: "Failed to parse query", details: error.message }, { status: 500 })
     }
 }
