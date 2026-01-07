@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     try {
         const { message } = await req.json()
         console.log("DEBUG: Received message:", message)
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" })
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
 
         const prompt = `
         You are a smart classroom assistant query parser.
