@@ -16,6 +16,7 @@ interface CalendarViewProps {
 }
 
 export function CalendarView({ items }: CalendarViewProps) {
+    const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date())
     const [selectedTest, setSelectedTest] = React.useState<CombinedItem | null>(null)
 
     // Filter items for the selected date (including date ranges)
