@@ -1,71 +1,70 @@
+import { GoogleGenerativeAI } from "@google/generative-ai"
+import { NextRequest, NextResponse } from "next/server"
 
-import Groq from "groq-sdk";
-import { NextResponse } from "next/server";
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-export async function POST(req: Request) {
-    if (!process.env.GROQ_API_KEY) {
-        console.error("DEBUG: GROQ_API_KEY is missing");
-        return NextResponse.json({ error: "Groq API Key missing" }, { status: 500 });
-    }
-
+export async function POST(req: NextRequest) {
     try {
-        const { message } = await req.json();
-        console.log("DEBUG: Received message for Groq:", message);
+        const { message } = await req.json()
 
-        const completion = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "system",
-                    content: `You are a smart classroom assistant query parser.
-                    Your job is to extract search criteria from the user's query to help find relevant study materials.
-                    
-                    Return a JSON object with the following structure:
-                    {
-                        "intent": "search" | "greeting" | "unknown",
-                        "reply": "Optional conversational reply (only for greetings or unknown)",
-                        "criteria": {
-                            "courseName": string | null, // e.g., "Biology", "Math"
-                            "keywords": string[] | null, // Array of search terms: ["Unit 3", "Unit 4", "Genetics"]
-                            "type": "ASSIGNMENT" | "TEST" | "MATERIAL" | null,
-                            "fileFormat": "PDF" | "PPT" | "DOC" | "FORM" | "VIDEO" | null
-                        }
-                    }
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+            },
+        })
 
-                    Rules:
-                    - If the user asks for "notes", "materials", "docs", treat it as intent="search".
-                    - If the user explicitly asks for "PDFs", set fileFormat="PDF".
-                    - If the user asks for "slides", "ppts", "presentations", set fileFormat="PPT".
-                    - If "forms" or "quizzes", set fileFormat="FORM".
-                    - If "videos" or "recordings", set fileFormat="VIDEO".
-                    - If the user asks "Do I have a test?", treat it as intent="search" with type="TEST".
-                    - If the user says "Hi" or "Hello", treat as intent="greeting".
-                    - Extract the specific course name if mentioned.
-                    - **CRITICAL: Expand ranges.** If user says "Unit 3 - 5", return keywords: ["Unit 3", "Unit 4", "Unit 5"].
-                    - **DECONSTRUCT EVERYTHING:** Separate complex concepts. "Gravity and Motion" -> ["Gravity", "Motion"].
-                    - **BE AGGRESSIVE:** If user mentions a topic, sub-topic, or chapter, Add it to keywords.
-                    - Do not summarize. Extract raw terms.
-                    - Return ONLY raw JSON. No markdown formatting.`
-                },
-                {
-                    role: "user",
-                    content: message
-                }
-            ],
-            model: "llama-3.3-70b-versatile",
-            temperature: 0,
-            response_format: { type: "json_object" }
-        });
+        const prompt = `You are a chatbot intent classifier for a student study assistant app.
 
-        const jsonResponse = completion.choices[0]?.message?.content;
+User Message: "${message}"
 
-        if (!jsonResponse) throw new Error("Empty response from Groq");
+Your task:
+1. Determine if this is a "greeting", "search", or "other".
+2. If "search", extract search criteria:
+   - courseName: e.g., "Math", "Biology"
+   - type: "TEST", "ASSIGNMENT", or null
+   - keywords: ARRAY of keywords (break down ranges like "Unit 3-5" into ["Unit 3", "Unit 4", "Unit 5"])
+   - fileFormat: "PDF", "PPT", "DOC", "FORM", "VIDEO", or null
 
-        return NextResponse.json(JSON.parse(jsonResponse));
+CRITICAL: For ranges like "Unit 3 - 5" or "Unit 3-5", expand into individual units: ["Unit 3", "Unit 4", "Unit 5"].
+CRITICAL: Aggressively deconstruct phrases. "Physics Unit 3-5 and Question Bank" → ["Physics", "Unit 3", "Unit 4", "Unit 5", "Question Bank"].
 
-    } catch (error: any) {
-        console.error("DEBUG: Groq parsing error:", error);
-        return NextResponse.json({ error: "Failed to parse query", details: error.message }, { status: 500 });
+Return JSON:
+{
+  "intent": "greeting | search | other",
+  "reply": "A friendly response (for greetings)",
+  "criteria": {
+    "courseName": "string or null",
+    "type": "TEST | ASSIGNMENT | null",
+    "keywords": ["array", "of", "keywords"],
+    "fileFormat": "PDF | PPT | DOC | FORM | VIDEO | null"
+  }
+}
+
+Examples:
+- "Show me Math assignments" → intent: "search", criteria: { courseName: "Math", type: "ASSIGNMENT", keywords: ["Math", "assignments"] }
+- "Unit 3 - 5" → intent: "search", criteria: { keywords: ["Unit 3", "Unit 4", "Unit 5"] }
+- "Physics Unit 3-5 PDFs" → intent: "search", criteria: { courseName: "Physics", keywords: ["Physics", "Unit 3", "Unit 4", "Unit 5", "PDFs"], fileFormat: "PDF" }
+- "Hello" → intent: "greeting", reply: "Hi! How can I help you study today?"`
+
+        const result = await model.generateContent(prompt)
+        const responseText = result.response.text()
+
+        try {
+            const parsed = JSON.parse(responseText)
+            return NextResponse.json(parsed)
+        } catch (e) {
+            console.error("Failed to parse Gemini response:", responseText)
+            return NextResponse.json({
+                intent: "other",
+                reply: "I'm not sure I understand. Try asking for specific materials.",
+            })
+        }
+    } catch (error) {
+        console.error("Chat intent error:", error)
+        return NextResponse.json(
+            { error: "Failed to process intent" },
+            { status: 500 }
+        )
     }
 }
