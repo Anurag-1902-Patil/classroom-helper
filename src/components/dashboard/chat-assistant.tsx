@@ -99,9 +99,9 @@ export function ChatAssistant() {
 
                         const format = criteria.fileFormat
                         const hasMatchingFile = item.materials.some(m => {
-                            if (format === 'PDF' && 'driveFile' in m && m.driveFile.driveFile.title.toLowerCase().endsWith('.pdf')) return true
-                            if (format === 'PPT' && 'driveFile' in m && (m.driveFile.driveFile.title.toLowerCase().endsWith('.pptx') || m.driveFile.driveFile.title.toLowerCase().includes('presentation'))) return true
-                            if (format === 'DOC' && 'driveFile' in m && m.driveFile.driveFile.title.toLowerCase().endsWith('.docx')) return true
+                            if (format === 'PDF' && 'driveFile' in m && m.driveFile.title.toLowerCase().endsWith('.pdf')) return true
+                            if (format === 'PPT' && 'driveFile' in m && (m.driveFile.title.toLowerCase().endsWith('.pptx') || m.driveFile.title.toLowerCase().includes('presentation'))) return true
+                            if (format === 'DOC' && 'driveFile' in m && m.driveFile.title.toLowerCase().endsWith('.docx')) return true
                             if (format === 'FORM' && 'form' in m) return true
                             if (format === 'VIDEO' && 'youtubeVideo' in m) return true
                             return false
