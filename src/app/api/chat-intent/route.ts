@@ -43,7 +43,9 @@ export async function POST(req: Request) {
                     - If the user says "Hi" or "Hello", treat as intent="greeting".
                     - Extract the specific course name if mentioned.
                     - **CRITICAL: Expand ranges.** If user says "Unit 3 - 5", return keywords: ["Unit 3", "Unit 4", "Unit 5"].
-                    - Extract all important topics into "keywords".
+                    - **DECONSTRUCT EVERYTHING:** Separate complex concepts. "Gravity and Motion" -> ["Gravity", "Motion"].
+                    - **BE AGGRESSIVE:** If user mentions a topic, sub-topic, or chapter, Add it to keywords.
+                    - Do not summarize. Extract raw terms.
                     - Return ONLY raw JSON. No markdown formatting.`
                 },
                 {
