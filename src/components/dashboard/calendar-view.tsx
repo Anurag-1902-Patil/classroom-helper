@@ -9,20 +9,22 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import "react-day-picker/dist/style.css"
 
+import { TestDetailsDialog } from "./test-details-dialog"
+
 interface CalendarViewProps {
     items: CombinedItem[]
 }
 
 export function CalendarView({ items }: CalendarViewProps) {
-    const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(new Date())
+    const [selectedTest, setSelectedTest] = React.useState<CombinedItem | null>(null)
 
     // Filter items for the selected date (including date ranges)
     const selectedDateItems = items.filter(item => {
         if (!selectedDate) return false
-        
+
         // Check if item is on this exact date
         if (item.date && isSameDay(item.date, selectedDate)) return true
-        
+
         // Check if selected date is within date range (submission windows)
         if (item.startDate && item.endDate) {
             const selected = selectedDate.getTime()
@@ -30,7 +32,7 @@ export function CalendarView({ items }: CalendarViewProps) {
             const end = item.endDate.getTime()
             return selected >= start && selected <= end
         }
-        
+
         return false
     })
 
@@ -51,6 +53,14 @@ export function CalendarView({ items }: CalendarViewProps) {
             }
         }
     })
+
+    const handleItemClick = (item: CombinedItem) => {
+        if (item.type === "TEST" || (item.type === "URGENT" && item.testType)) {
+            setSelectedTest(item)
+        } else if (item.link) {
+            window.open(item.link, "_blank")
+        }
+    }
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -94,14 +104,23 @@ export function CalendarView({ items }: CalendarViewProps) {
                     {selectedDateItems.length > 0 ? (
                         <div className="space-y-4">
                             {selectedDateItems.map(item => (
-                                <div key={item.id} className="flex gap-4 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800 hover:border-zinc-700 transition-colors">
+                                <div
+                                    key={item.id}
+                                    onClick={() => handleItemClick(item)}
+                                    className={cn(
+                                        "flex gap-4 p-3 rounded-lg bg-zinc-800/30 border border-zinc-800 transition-all duration-300",
+                                        (item.type === "TEST" || (item.type === "URGENT" && item.testType) || item.link)
+                                            ? "cursor-pointer hover:bg-zinc-800/60 hover:border-zinc-700 hover:shadow-lg hover:shadow-purple-500/5 active:scale-[0.99]"
+                                            : ""
+                                    )}
+                                >
                                     <div className={cn(
                                         "w-1 h-full min-h-[3rem] rounded-full shrink-0",
                                         item.type === "ASSIGNMENT" ? "bg-blue-500" :
                                             item.type === "EVENT" ? "bg-purple-500" : "bg-zinc-500"
                                     )} />
                                     <div className="space-y-1">
-                                        <h4 className="font-medium text-zinc-200">{item.summary || item.title}</h4>
+                                        <h4 className="font-medium text-zinc-200 group-hover:text-purple-300 transition-colors">{item.summary || item.title}</h4>
                                         <div className="flex items-center gap-2 text-xs text-zinc-400 flex-wrap">
                                             {/* Status badges first */}
                                             {item.status === "POSTPONED" && (
@@ -144,6 +163,14 @@ export function CalendarView({ items }: CalendarViewProps) {
                     )}
                 </CardContent>
             </Card>
+
+            <TestDetailsDialog
+                open={!!selectedTest}
+                onOpenChange={(open) => !open && setSelectedTest(null)}
+                item={selectedTest!}
+                allItems={items}
+            />
         </div>
     )
 }
+
