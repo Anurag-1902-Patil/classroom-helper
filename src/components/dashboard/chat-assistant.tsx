@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Bot, Send, X, ExternalLink, Loader2, FileText, Minimize2 } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useClassroomData, CombinedItem } from "@/hooks/useClassroomData"
@@ -32,17 +31,39 @@ export function ChatAssistant() {
 
     const { data: allItems } = useClassroomData()
 
+    // Load/Save Persistence
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight
+        const saved = localStorage.getItem("chat-history")
+        if (saved) {
+            try {
+                setMessages(JSON.parse(saved))
+            } catch (e) {
+                console.error("Failed to load chat history")
+            }
+        }
+    }, [])
+
+    useEffect(() => {
+        if (messages.length > 0) {
+            localStorage.setItem("chat-history", JSON.stringify(messages))
         }
     }, [messages])
 
+    // Auto-scroll to bottom
     useEffect(() => {
-        if (isOpen && inputRef.current) {
-            inputRef.current.focus()
+        const scrollViewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') as HTMLElement;
+        const target = scrollViewport || scrollRef.current;
+
+        if (target) {
+            target.scrollTop = target.scrollHeight
         }
-    }, [isOpen])
+    }, [messages, isOpen])
+
+    const handleClear = () => {
+        const initial = [{ id: "1", role: "assistant" as const, content: "Hi! I'm your study assistant. Ask me for materials, assignments, or check upcoming tests!", type: "text" as const }]
+        setMessages(initial)
+        localStorage.removeItem("chat-history")
+    }
 
     const handleSend = async () => {
         if (!inputValue.trim()) return
@@ -87,12 +108,9 @@ export function ChatAssistant() {
                     }
 
                     // Filter by Topic Keywords (Fuzzy OR Match)
-                    // "Unit 3 - 5" -> ["Unit 3", "Unit 4", "Unit 5"] -> Match ANY
                     if (criteria.keywords && Array.isArray(criteria.keywords) && criteria.keywords.length > 0) {
                         const content = (item.title + " " + (item.description || "") + " " + item.courseName).toLowerCase()
-
                         const hasKeywordMatch = criteria.keywords.some((k: string) => content.includes(k.toLowerCase()))
-
                         if (!hasKeywordMatch) return false
                     }
                     // Fallback for old "topic" (legacy support just in case)
@@ -157,6 +175,12 @@ export function ChatAssistant() {
         }
     }
 
+    useEffect(() => {
+        if (isOpen && inputRef.current) {
+            inputRef.current.focus()
+        }
+    }, [isOpen])
+
     return (
         <>
             <AnimatePresence>
@@ -182,77 +206,84 @@ export function ChatAssistant() {
                                     </p>
                                 </div>
                             </div>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white" onClick={() => setIsOpen(false)}>
-                                <Minimize2 className="w-4 h-4" />
-                            </Button>
+                            <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-400" onClick={handleClear} title="Clear History">
+                                    <X className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-white" onClick={() => setIsOpen(false)}>
+                                    <Minimize2 className="w-4 h-4" />
+                                </Button>
+                            </div>
                         </div>
 
                         {/* Messages */}
-                        <ScrollArea className="flex-1 p-4 bg-zinc-950/50" ref={scrollRef}>
-                            <div className="space-y-4">
-                                {messages.map((msg) => (
-                                    <div
-                                        key={msg.id}
-                                        className={cn(
-                                            "flex gap-3 max-w-[85%]",
-                                            msg.role === "user" ? "ml-auto" : "mr-auto"
-                                        )}
-                                    >
-                                        {msg.role === "assistant" && (
+                        <div className="flex-1 min-h-0 bg-zinc-950/50 relative">
+                            <ScrollArea className="h-full w-full p-4" ref={scrollRef}>
+                                <div className="space-y-4">
+                                    {messages.map((msg) => (
+                                        <div
+                                            key={msg.id}
+                                            className={cn(
+                                                "flex gap-3 max-w-[85%]",
+                                                msg.role === "user" ? "ml-auto" : "mr-auto"
+                                            )}
+                                        >
+                                            {msg.role === "assistant" && (
+                                                <div className="w-6 h-6 rounded-full bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 mt-1">
+                                                    <Bot className="w-3.5 h-3.5" />
+                                                </div>
+                                            )}
+                                            <div className="space-y-2">
+                                                <div className={cn(
+                                                    "p-3 rounded-2xl text-sm leading-relaxed",
+                                                    msg.role === "user"
+                                                        ? "bg-purple-600 text-white rounded-tr-sm"
+                                                        : "bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-tl-sm"
+                                                )}>
+                                                    {msg.content}
+                                                </div>
+
+                                                {/* Render Results Cards */}
+                                                {msg.type === "results" && msg.results && (
+                                                    <div className="space-y-2">
+                                                        {msg.results.map(item => (
+                                                            <Card key={item.id} className="bg-zinc-900/80 border-zinc-800 hover:border-purple-500/30 transition-colors group cursor-pointer" onClick={() => window.open(item.link, '_blank')}>
+                                                                <CardContent className="p-3 flex items-start gap-3">
+                                                                    <div className={cn(
+                                                                        "p-2 rounded-lg shrink-0",
+                                                                        item.type === "TEST" ? "bg-orange-950/30 text-orange-400" :
+                                                                            item.type === "ASSIGNMENT" ? "bg-blue-950/30 text-blue-400" :
+                                                                                "bg-zinc-800 text-zinc-400"
+                                                                    )}>
+                                                                        <FileText className="w-4 h-4" />
+                                                                    </div>
+                                                                    <div className="min-w-0">
+                                                                        <h4 className="text-sm font-medium text-zinc-200 truncate group-hover:text-purple-300 transition-colors">{item.title}</h4>
+                                                                        <p className="text-xs text-zinc-500 truncate">{item.courseName}</p>
+                                                                    </div>
+                                                                    <ExternalLink className="w-3 h-3 text-zinc-600 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                                </CardContent>
+                                                            </Card>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {isThinking && (
+                                        <div className="flex gap-3 mr-auto">
                                             <div className="w-6 h-6 rounded-full bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 mt-1">
                                                 <Bot className="w-3.5 h-3.5" />
                                             </div>
-                                        )}
-                                        <div className="space-y-2">
-                                            <div className={cn(
-                                                "p-3 rounded-2xl text-sm leading-relaxed",
-                                                msg.role === "user"
-                                                    ? "bg-purple-600 text-white rounded-tr-sm"
-                                                    : "bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-tl-sm"
-                                            )}>
-                                                {msg.content}
+                                            <div className="bg-zinc-900 border border-zinc-800 rounded-2xl rounded-tl-sm p-3 flex items-center gap-2">
+                                                <Loader2 className="w-3 h-3 text-zinc-400 animate-spin" />
+                                                <span className="text-xs text-zinc-400">Thinking...</span>
                                             </div>
-
-                                            {/* Render Results Cards */}
-                                            {msg.type === "results" && msg.results && (
-                                                <div className="space-y-2">
-                                                    {msg.results.map(item => (
-                                                        <Card key={item.id} className="bg-zinc-900/80 border-zinc-800 hover:border-purple-500/30 transition-colors group cursor-pointer" onClick={() => window.open(item.link, '_blank')}>
-                                                            <CardContent className="p-3 flex items-start gap-3">
-                                                                <div className={cn(
-                                                                    "p-2 rounded-lg shrink-0",
-                                                                    item.type === "TEST" ? "bg-orange-950/30 text-orange-400" :
-                                                                        item.type === "ASSIGNMENT" ? "bg-blue-950/30 text-blue-400" :
-                                                                            "bg-zinc-800 text-zinc-400"
-                                                                )}>
-                                                                    <FileText className="w-4 h-4" />
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <h4 className="text-sm font-medium text-zinc-200 truncate group-hover:text-purple-300 transition-colors">{item.title}</h4>
-                                                                    <p className="text-xs text-zinc-500 truncate">{item.courseName}</p>
-                                                                </div>
-                                                                <ExternalLink className="w-3 h-3 text-zinc-600 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                            </CardContent>
-                                                        </Card>
-                                                    ))}
-                                                </div>
-                                            )}
                                         </div>
-                                    </div>
-                                ))}
-                                {isThinking && (
-                                    <div className="flex gap-3 mr-auto">
-                                        <div className="w-6 h-6 rounded-full bg-purple-600/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/20 mt-1">
-                                            <Bot className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl rounded-tl-sm p-3 flex items-center gap-2">
-                                            <Loader2 className="w-3 h-3 text-zinc-400 animate-spin" />
-                                            <span className="text-xs text-zinc-400">Thinking...</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </ScrollArea>
+                                    )}
+                                </div>
+                            </ScrollArea>
+                        </div>
 
                         {/* Input */}
                         <div className="p-4 bg-zinc-900 border-t border-zinc-800">
