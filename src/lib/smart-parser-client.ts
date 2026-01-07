@@ -14,7 +14,7 @@ export interface DetectedEvent {
     testType?: string
 }
 
-export async function parseAnnouncementText(text: string, courseId?: string): Promise<DetectedEvent[]> {
+export async function parseAnnouncementText(text: string, courseId?: string, postedDate?: string): Promise<DetectedEvent[]> {
     const events: DetectedEvent[] = []
 
     if (!text || text.trim().length === 0) {
@@ -22,7 +22,7 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
     }
 
     // Check Cache first
-    const cacheKey = `ai-cache-v2-${text.length}-${text.slice(0, 30)}-${text.slice(-30)}`
+    const cacheKey = `ai-cache-v3-${text.length}-${text.slice(0, 30)}-${text.slice(-30)}`
     if (typeof window !== 'undefined') {
         const cached = localStorage.getItem(cacheKey)
         if (cached) {
@@ -49,7 +49,7 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ text }),
+            body: JSON.stringify({ text, postedDate }),
         })
 
         if (!response.ok) {
@@ -124,16 +124,16 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
                 }
 
                 // Always include if it has dates, status, or is urgent/submission window
-                if (date || startDate || endDate || 
-                    pEvent.status === "POSTPONED" || 
-                    pEvent.status === "CANCELLED" || 
-                    type === "URGENT" || 
+                if (date || startDate || endDate ||
+                    pEvent.status === "POSTPONED" ||
+                    pEvent.status === "CANCELLED" ||
+                    type === "URGENT" ||
                     type === "SUBMISSION_WINDOW") {
                     events.push(baseEvent)
                 }
             })
 
-            // Save to Cache
+            // Save to Cache (updated key v3)
             if (typeof window !== 'undefined' && events.length > 0) {
                 localStorage.setItem(cacheKey, JSON.stringify(events))
             }
@@ -148,4 +148,3 @@ export async function parseAnnouncementText(text: string, courseId?: string): Pr
     console.warn("⚠️ No events extracted from announcement")
     return events
 }
-

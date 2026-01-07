@@ -130,7 +130,7 @@ export function useClassroomData() {
                 const processAnnouncement = async (a: any) => {
                     console.log(`📢 Processing announcement from ${course.name}:`, a.text?.substring(0, 100) || 'No text')
                     try {
-                        const detectedEvents = await parseAnnouncementText(a.text || '', course.id)
+                        const detectedEvents = await parseAnnouncementText(a.text || '', course.id, a.creationTime)
                         const results: CombinedItem[] = []
 
                         if (detectedEvents.length > 0) {

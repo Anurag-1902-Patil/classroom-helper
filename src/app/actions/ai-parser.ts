@@ -17,7 +17,7 @@ export interface ParsedEvent {
 }
 
 // Groq Parser
-export async function parseWithGroq(text: string): Promise<ParsedEvent[]> {
+export async function parseWithGroq(text: string, postedDate?: string): Promise<ParsedEvent[]> {
   const apiKey = process.env.GROQ_API_KEY
   if (!apiKey) {
     console.warn("Groq API key not found")
@@ -27,12 +27,10 @@ export async function parseWithGroq(text: string): Promise<ParsedEvent[]> {
   try {
     const groq = new Groq({ apiKey });
 
-    const currentDate = new Date()
-    const currentDateStr = currentDate.toISOString().split('T')[0]
-    const currentYear = currentDate.getFullYear()
-    const currentMonth = currentDate.getMonth() + 1
-    const currentDay = currentDate.getDate()
-    const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][currentDate.getDay()]
+    const referenceDate = postedDate ? new Date(postedDate) : new Date()
+    const referenceDateStr = referenceDate.toISOString().split('T')[0]
+    const referenceYear = referenceDate.getFullYear()
+    const dayOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][referenceDate.getDay()]
 
     const prompt = `You are an expert academic event parser. Analyze this classroom announcement and extract ALL important information into a JSON array.
 
@@ -40,22 +38,23 @@ ANNOUNCEMENT TEXT:
 "${text}"
 
 CURRENT CONTEXT:
-- Today's Date: ${currentDateStr} (${dayOfWeek})
-- Current Year: ${currentYear}
+- Announcement Date: ${referenceDateStr} (${dayOfWeek})
+- Reference Year: ${referenceYear}
 
-YOUR TASK - Extract EVERYTHING:
+YOUR TASK - Extract EVERYTHING relative to the Announcement Date:
 
 1. **TESTS/EXAMS**: Look for words like "test", "exam", "quiz", "midterm", "final", "unit test", "assessment"
    - Extract the test name/number (e.g., "Unit Test 4", "Midterm Exam")
-   - Extract the EXACT date and time
+   - Extract the EXACT date and time via the Announcement Date context.
+   - Example: If announcement date is Monday Dec 1st and says "test next Monday", date is Dec 8th.
    - Check if it's POSTPONED or CANCELLED
 
 2. **SUBMISSION WINDOWS**: Look for phrases like "submission", "submit", "due", "between", "from X to Y"
    - Extract START date and END date for submission windows
 
 3. **DATE PARSING RULES**:
-   - "Monday 08/12/2025" → 2025-12-08
-   - "Monday at 8 pm" → Next Monday at 20:00:00
+   - "Monday 08/12" → Use Reference Year unless 08/12 is in past relative to Announcement Date.
+   - "Next week" → Add 7 days to Announcement Date.
 
 OUTPUT FORMAT (JSON Array):
 [
@@ -109,13 +108,13 @@ Analyze the announcement and return ONLY raw JSON.`
 }
 
 // Main parser function with logging
-export async function analyzeAnnouncement(text: string): Promise<ParsedEvent[]> {
+export async function analyzeAnnouncement(text: string, postedDate?: string): Promise<ParsedEvent[]> {
   if (!text || text.trim().length === 0) {
     return []
   }
 
   // Try Groq first
-  const groqResults = await parseWithGroq(text)
+  const groqResults = await parseWithGroq(text, postedDate)
 
   if (groqResults && groqResults.length > 0) {
     return groqResults
