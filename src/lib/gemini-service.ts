@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 
 interface ExtractedEvent {
   event_title: string;
@@ -16,16 +16,18 @@ type EventExtractionResult =
   | { success: false; reason: string };
 
 /**
- * Gemini-based event extraction service
+ * Groq-based event extraction service (formerly GeminiService)
  * Parses unstructured user input to detect and extract exam/test details
  */
 class GeminiService {
-  private client: GoogleGenerativeAI;
-  private model: any;
+  private groq: Groq;
+  private model: string;
 
   constructor(apiKey: string) {
-    this.client = new GoogleGenerativeAI(apiKey);
-    this.model = this.client.getGenerativeModel({ model: "gemini-2.0-flash" });
+    // If no API key is provided here, it will try to use the one from process.env inside Groq internal logic
+    // But usually passing it explicitly is safer if we have it injected
+    this.groq = new Groq({ apiKey });
+    this.model = "llama3-8b-8192";
   }
 
   /**
@@ -69,17 +71,24 @@ Extract event details from the following user input:`;
   }
 
   /**
-   * Parse user input and extract event details using Gemini
+   * Parse user input and extract event details using Groq
    * @param userInput - Raw user input (text, transcript, OCR output)
    * @returns Extracted event or failure reason
    */
   async extractEvent(userInput: string): Promise<EventExtractionResult> {
     try {
       const systemPrompt = this.getSystemPrompt();
-      const fullPrompt = `${systemPrompt}\n\n"${userInput}"`;
+      const completion = await this.groq.chat.completions.create({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userInput }
+        ],
+        model: this.model,
+        temperature: 0,
+        response_format: { type: "json_object" }
+      });
 
-      const response = await this.model.generateContent(fullPrompt);
-      const responseText = response.response.text().trim();
+      const responseText = completion.choices[0]?.message?.content || "";
 
       // Parse JSON response
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -103,7 +112,7 @@ Extract event details from the following user input:`;
 
       return { success: true, event };
     } catch (error) {
-      console.error("Gemini extraction error:", error);
+      console.error("Groq extraction error:", error);
       return {
         success: false,
         reason:
