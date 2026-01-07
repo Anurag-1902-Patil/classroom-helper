@@ -86,7 +86,7 @@ export function useClassroomData() {
                             if (detectedEvents.length > 0) {
                                 const bestEvent = detectedEvents[0]
                                 if (!date && bestEvent.date) {
-                                    date = bestEvent.date
+                                    date = new Date(bestEvent.date)
                                 }
                                 aiSummary = bestEvent.summary
                                 if (bestEvent.type === 'TEST' || bestEvent.type === 'URGENT') {
@@ -160,9 +160,9 @@ export function useClassroomData() {
                                     summary: event.summary,
                                     description: a.text,
                                     materials: a.materials,
-                                    date: event.date || event.endDate, // Use end date for submission windows
-                                    startDate: event.startDate,
-                                    endDate: event.endDate,
+                                    date: (event.date ? new Date(event.date) : (event.endDate ? new Date(event.endDate) : undefined)),
+                                    startDate: event.startDate ? new Date(event.startDate) : undefined,
+                                    endDate: event.endDate ? new Date(event.endDate) : undefined,
                                     type: mappedType,
                                     courseName: course.name,
                                     courseSection: course.section,
